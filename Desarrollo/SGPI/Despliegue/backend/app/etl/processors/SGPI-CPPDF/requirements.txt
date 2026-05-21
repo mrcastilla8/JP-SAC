@@ -1,0 +1,6 @@
+pymupdf
+pdfplumber
+openpyxl
+typer
+pydantic
+python-dotenv
