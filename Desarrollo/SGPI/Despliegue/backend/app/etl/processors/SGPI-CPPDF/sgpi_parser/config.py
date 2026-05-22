@@ -27,5 +27,22 @@ class Settings:
     
     # Nombre del modelo a usar en el benchmark/validación
     GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
+    
+    # Configuración de Tesseract OCR
+    TESSERACT_CMD: Optional[str] = os.environ.get(
+        "TESSERACT_CMD", 
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    )
+    OCR_DENSITY_THRESHOLD: int = int(os.environ.get("OCR_DENSITY_THRESHOLD", "150"))
+    OCR_LANGUAGE: str = os.environ.get("OCR_LANGUAGE", "spa")
+    OCR_DPI: int = int(os.environ.get("OCR_DPI", "300"))
 
 settings = Settings()
+
+# Configurar ruta del binario de pytesseract si existe y está instalado
+if settings.TESSERACT_CMD:
+    try:
+        import pytesseract
+        pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
+    except Exception:
+        pass
