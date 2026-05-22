@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from sgpi_parser.core.base_parser import BaseParser
 from sgpi_parser.core.models import ResolucionRectoral, MetadataRR, ProyectoRR, Integrante
-from sgpi_parser.utils.pdf_utils import get_fitz_doc
+from sgpi_parser.utils.pdf_utils import get_fitz_doc, is_page_scanned, extract_page_text_ocr, extract_page_words_ocr
 from sgpi_parser.utils.string_utils import clean_text, extract_number, fuzzy_match
 
 # Listado de roles válidos para filtrado
@@ -45,7 +45,14 @@ class HeuristicRRParser(BaseParser):
 
         # Escanear las primeras páginas para metadatos rectorales (únicamente páginas 0 y 1 para evitar fechas de reportes)
         for p_idx in range(min(2, len(doc))):
-            text = doc[p_idx].get_text()
+            page = doc[p_idx]
+            if is_page_scanned(page):
+                try:
+                    text = extract_page_text_ocr(page)
+                except Exception:
+                    text = page.get_text()
+            else:
+                text = page.get_text()
             
             # Buscar número de resolución rectoral
             # Buscar todos en la primera página para tomar el último (que es el real, no los históricos citados antes)
@@ -116,13 +123,27 @@ class HeuristicRRParser(BaseParser):
 
         for p_idx in range(len(doc)):
             page = doc[p_idx]
-            text = page.get_text()
+            scanned = is_page_scanned(page)
+            if scanned:
+                try:
+                    text = extract_page_text_ocr(page)
+                except Exception:
+                    text = page.get_text()
+            else:
+                text = page.get_text()
             
             # Solo procesar páginas de Anexos (que contienen tablas de miembros)
             if not ("Apellidos" in text or "Condición" in text or "Miembro" in text):
                 continue
                 
-            words = page.get_text("words")
+            if scanned:
+                try:
+                    words = extract_page_words_ocr(page)
+                except Exception:
+                    words = page.get_text("words")
+            else:
+                words = page.get_text("words")
+                
             if not words:
                 continue
 
