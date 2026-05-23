@@ -1,2 +1,0 @@
-# Este conector de RENACYT utiliza únicamente la biblioteca estándar de Python (zero-dependency).
-# No se requieren dependencias externas adicionales para su ejecución.
