@@ -33,17 +33,19 @@ export interface Evidencia {
 }
 
 export interface Convocatoria {
-  id:             string;
-  nombre:         string;
-  entidad:        string;            // "CONCYTEC", "VRIP", "PMI", etc.
-  programa?:      string;
-  estado:         EstadoConvocatoria;
-  fechaCierre:    string;            // ISO date "YYYY-MM-DD"
-  fuente:         string;            // "RAIS", "CONCYTEC API", etc.
-  ultimaSync:     string;            // formatted: "25 May 2026, 08:00 AM"
-  descripcion?:   string;
-  cronogramaModificado?: boolean;    // true si cambió desde la última sync
-  evidencias:     Evidencia[];
+  id:                    string;
+  nombre:                string;
+  entidad:               string;
+  programa?:             string;
+  estado:                EstadoConvocatoria;
+  apertura?:             string;            // ISO date — fecha de apertura
+  fechaCierre:           string;            // ISO date — fecha de cierre actual
+  cierreOriginal?:       string;            // ISO date — fecha de cierre ANTES de la modificación
+  fuente:                string;
+  ultimaSync:            string;
+  descripcion?:          string;
+  cronogramaModificado?: boolean;
+  evidencias:            Evidencia[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
