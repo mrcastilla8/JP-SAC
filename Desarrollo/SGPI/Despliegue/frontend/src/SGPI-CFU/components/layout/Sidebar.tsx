@@ -221,10 +221,11 @@ const NAV_ITEMS: NavItem[] = [
     roles:          ['admin', 'secretary', 'chief'],
   },
   {
-    id:    'publications',
-    label: 'Publicaciones y Tesis',
-    href:  '/publications',
-    icon:  BookIcon,
+    id:            'publications',
+    label:         'Publicaciones y Tesis',
+    href:          '/publications',
+    icon:          BookIcon,
+    matchPrefixes: ['/publications', '/SGPI-CFPT'],
   },
   {
     id:            'reports',
