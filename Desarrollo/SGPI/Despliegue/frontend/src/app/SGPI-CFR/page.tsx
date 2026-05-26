@@ -219,6 +219,120 @@ function LoadingModal() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Modal de confirmación de Snapshot
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SnapshotConfirmModal({
+  corte, anio, generadoPor, fechaEmision,
+  onCancel, onConfirm,
+}: {
+  corte: string; anio: number; generadoPor: string; fechaEmision: string;
+  onCancel: () => void; onConfirm: () => Promise<void>;
+}) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const CORTE_LABEL: Record<string, string> = {
+    abril: 'Abril', agosto: 'Agosto', noviembre: 'Noviembre',
+  };
+
+  const fechaStr = new Date(fechaEmision).toLocaleString('es-PE', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }).replace(',', '');
+
+  const handleConfirm = async () => {
+    setIsSaving(true);
+    await onConfirm();
+    setIsSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog" aria-modal="true" aria-labelledby="snapshot-modal-titulo">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onCancel} aria-hidden="true"/>
+
+      {/* Panel */}
+      <div className="relative w-full max-w-[520px] bg-white rounded-xl shadow-2xl overflow-hidden border border-[#e2e8f0]">
+
+        {/* Header amarillo */}
+        <div className="flex items-center gap-3 px-6 py-4 bg-[#fefce8] border-b border-[#fde68a]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <h2 id="snapshot-modal-titulo" className="font-heading font-bold text-[17px] text-[#92400e]">
+            Confirmar Generación de Snapshot
+          </h2>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <p className="font-sans text-[14px] text-on-surface leading-[22px]">
+            ¿Está seguro de generar un Snapshot para el corte de{' '}
+            <span className="font-bold">{CORTE_LABEL[corte] ?? corte} {anio}</span>?
+          </p>
+          <p className="font-sans text-[13px] text-on-surface-variant leading-[20px]">
+            Esta acción creará un registro inmutable del estado actual de los datos que no podrá
+            ser editado ni eliminado posteriormente. Servirá como anexo oficial para el reporte POI.
+          </p>
+
+          {/* Metadatos */}
+          <div className="rounded bg-[#f1f5f9] border border-[#e2e8f0] px-4 py-3">
+            <p className="font-mono font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-2">
+              Metadatos del Corte
+            </p>
+            <p className="font-mono text-[13px] text-on-surface">
+              Fecha de captura: {fechaStr} hrs
+            </p>
+            <p className="font-mono text-[13px] text-on-surface">
+              Usuario: {generadoPor}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e2e8f0] bg-[#f8fafc]">
+          <button
+            onClick={onCancel}
+            disabled={isSaving}
+            className="px-6 py-2.5 rounded-lg font-sans font-bold text-[14px] text-on-surface border border-outline-variant hover:bg-surface-container disabled:opacity-40 transition-colors"
+            aria-label="Cancelar"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={isSaving}
+            className="
+              px-6 py-2.5 rounded-lg
+              font-sans font-bold text-[14px] text-white
+              bg-[#dc2626] hover:bg-[#b91c1c] active:bg-[#991b1b]
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transition-colors duration-100
+              flex items-center gap-2
+            "
+            aria-label="Confirmar y congelar datos del snapshot"
+          >
+            {isSaving ? (
+              <>
+                <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                Guardando...
+              </>
+            ) : 'Confirmar y Congelar Datos'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tarjeta KPI
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -542,12 +656,14 @@ function FormularioReporte({ onGenerar }: { onGenerar: (p: ReporteParams) => voi
 function VistaResultados({
   result, onNuevoReporte,
 }: { result: ReporteResult; onNuevoReporte: () => void }) {
-  const [filtro,         setFiltro]         = useState('');
-  const [page,           setPage]           = useState(1);
-  const [snapshotSaved,  setSnapshotSaved]  = useState(false);
-  const [isExporting,    setIsExporting]    = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [filtro,            setFiltro]            = useState('');
+  const [page,              setPage]              = useState(1);
+  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [showToast,         setShowToast]         = useState(false);
+  const [isExporting,       setIsExporting]       = useState(false);
+  const [showExportMenu,    setShowExportMenu]    = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cerrar menú al click fuera
   useEffect(() => {
@@ -558,6 +674,9 @@ function VistaResultados({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Limpiar timer al desmontar
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   // ── Filtrado y paginación ──────────────────────────────────────────────────
   const registrosFiltrados = useMemo(() => {
@@ -576,11 +695,14 @@ function VistaResultados({
 
   const handleFiltro = (v: string) => { setFiltro(v); setPage(1); };
 
-  // ── Snapshot ────────────────────────────────────────────────────────────────
-  const handleSnapshot = async () => {
+  // ── Snapshot: confirmar → guardar → toast ───────────────────────────────────
+  const handleSnapshotConfirm = async () => {
+    // TODO (real API): guardarSnapshot ya apunta a POST /api/v1/reportes/snapshots
     await guardarSnapshot(result);
-    setSnapshotSaved(true);
-    setTimeout(() => setSnapshotSaved(false), 4000);
+    setShowSnapshotModal(false);
+    setShowToast(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setShowToast(false), 2000);
   };
 
   // ── Exportar ────────────────────────────────────────────────────────────────
@@ -664,7 +786,7 @@ function VistaResultados({
 
           {/* Guardar snapshot */}
           <button
-            onClick={handleSnapshot}
+            onClick={() => setShowSnapshotModal(true)}
             className="
               flex items-center gap-1.5
               px-4 py-2 rounded
@@ -675,7 +797,7 @@ function VistaResultados({
             aria-label="Guardar snapshot del reporte"
           >
             <SnapshotIcon />
-            {snapshotSaved ? '¡Guardado!' : 'Guardar Snapshot'}
+            Guardar Snapshot
           </button>
         </div>
       </div>
@@ -794,6 +916,41 @@ function VistaResultados({
           </div>
         )}
       </div>
+
+      {/* ── Modal confirmación snapshot ─────────────────────────────────────── */}
+      {showSnapshotModal && (
+        <SnapshotConfirmModal
+          corte={result.params.corte}
+          anio={result.params.anioFiscal}
+          generadoPor={result.generadoPor}
+          fechaEmision={result.fechaEmision}
+          onCancel={() => setShowSnapshotModal(false)}
+          onConfirm={handleSnapshotConfirm}
+        />
+      )}
+
+      {/* ── Toast de éxito (bottom-right, auto-dismiss 2s) ──────────────────── */}
+      {showToast && (
+        <div
+          role="status" aria-live="polite"
+          className="
+            fixed bottom-8 right-6 z-[60]
+            flex items-center gap-3
+            px-5 py-3.5 rounded-lg
+            bg-[#22c55e] text-white
+            shadow-2xl
+            font-sans font-semibold text-[14px]
+            animate-[slideInRight_0.25s_ease-out]
+          "
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          Snapshot POI generado y guardado exitosamente.
+        </div>
+      )}
     </div>
   );
 }
