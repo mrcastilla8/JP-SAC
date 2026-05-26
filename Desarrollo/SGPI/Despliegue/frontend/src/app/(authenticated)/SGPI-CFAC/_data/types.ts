@@ -12,13 +12,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type EstadoConvocatoria =
-  | 'Activa'
+  | 'Abierta'
   | 'Por Vencer'
   | 'Cerrada'
   | 'Suspendida';
 
 /** Nivel de urgencia calculado en base a días restantes */
-export type NivelAlerta = 'verde' | 'amarillo' | 'rojo';
+export type NivelAlerta = 'verde' | 'amarillo' | 'rojo' | 'gris' | 'difundido';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entidades
@@ -30,6 +30,7 @@ export interface Evidencia {
   descripcion: string;
   fechaCarga:  string;   // ISO date
   cargadoPor:  string;
+  urlArchivo?: string;
 }
 
 export interface Convocatoria {
@@ -39,12 +40,13 @@ export interface Convocatoria {
   programa?:             string;
   estado:                EstadoConvocatoria;
   apertura?:             string;            // ISO date — fecha de apertura
-  fechaCierre:           string;            // ISO date — fecha de cierre actual
+  fechaCierre?:           string | null;            // ISO date — fecha de cierre actual (puede ser nulo)
   cierreOriginal?:       string;            // ISO date — fecha de cierre ANTES de la modificación
   fuente:                string;
   ultimaSync:            string;
   descripcion?:          string;
   cronogramaModificado?: boolean;
+  cronogramaDetallado?:  { actividad: string; fecha_detalle: string }[];
   evidencias:            Evidencia[];
 }
 
