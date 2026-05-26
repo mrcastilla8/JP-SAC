@@ -227,11 +227,12 @@ const NAV_ITEMS: NavItem[] = [
     icon:  BookIcon,
   },
   {
-    id:    'reports',
-    label: 'Reportes',
-    href:  '/reports',
-    icon:  ChartIcon,
-    roles: ['admin', 'secretary', 'chief'],
+    id:            'reports',
+    label:         'Reportes',
+    href:          '/reports',
+    icon:          ChartIcon,
+    matchPrefixes: ['/reports', '/SGPI-CFR'],
+    roles:         ['admin', 'secretary', 'chief'],
   },
   {
     id:             'audit',
