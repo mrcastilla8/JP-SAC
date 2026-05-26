@@ -200,8 +200,9 @@ const NAV_ITEMS: NavItem[] = [
   {
     id:    'sync',
     label: 'Sincronización',
-    href:  '/sync',
+    href:  '/SGPI-CFSF',
     icon:  SyncIcon,
+    matchPrefixes: ['/SGPI-CFSF'],
     roles: ['admin'],
   },
   {
