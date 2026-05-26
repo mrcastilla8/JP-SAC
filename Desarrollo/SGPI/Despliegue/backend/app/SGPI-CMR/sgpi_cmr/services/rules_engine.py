@@ -1,6 +1,6 @@
 from typing import Dict, Any, Tuple, Optional
-from sgpi_mrn.schemas.incoming import InvestigadorInput, ProyectoInput, PublicacionInput, AsesorTesisInput
-from sgpi_mrn.services.name_normalizer import normalizer
+from sgpi_cmr.schemas.incoming import InvestigadorInput, ProyectoInput, PublicacionInput, AsesorTesisInput
+from sgpi_cmr.services.name_normalizer import normalizer
 
 class ReconciliationRulesEngine:
     """

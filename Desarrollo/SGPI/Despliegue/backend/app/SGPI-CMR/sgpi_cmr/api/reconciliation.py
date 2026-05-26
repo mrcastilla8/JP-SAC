@@ -5,9 +5,9 @@ from typing import Dict, Any, List
 
 from app.db.session import get_db
 from app.models.domain import Investigador, Proyecto, Publicacion, Tesis, ReconciliacionPendiente
-from sgpi_mrn.schemas.incoming import BulkInvestigadorPayload, BulkProyectoPayload, BulkPublicacionPayload, BulkAsesorTesisPayload
-from sgpi_mrn.services.rules_engine import rules_engine
-from sgpi_mrn.services.persister import persister
+from sgpi_cmr.schemas.incoming import BulkInvestigadorPayload, BulkProyectoPayload, BulkPublicacionPayload, BulkAsesorTesisPayload
+from sgpi_cmr.services.rules_engine import rules_engine
+from sgpi_cmr.services.persister import persister
 
 router = APIRouter()
 
