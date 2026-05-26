@@ -199,6 +199,12 @@ export function getLockUntil(): number | null {
  * @returns true si el bloqueo sigue vigente, false en caso contrario
  */
 export function isAccountLocked(): boolean {
+  // DEV OVERRIDE: Desactivar bloqueo en desarrollo para facilitar pruebas
+  if (process.env.NODE_ENV === 'development') {
+    clearLock();
+    return false;
+  }
+
   const lockUntil = getLockUntil();
   if (!lockUntil) return false;
 
