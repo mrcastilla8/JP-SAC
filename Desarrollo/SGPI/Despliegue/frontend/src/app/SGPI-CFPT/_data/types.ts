@@ -36,15 +36,30 @@ export type EstadoValidacion =
 /** Cuartil de indexación de revistas */
 export type Cuartil = 'Q1' | 'Q2' | 'Q3' | 'Q4' | null;
 
+/** Rol del investigador dentro de la publicación o tesis */
+export type RolPublicacion =
+  | 'Autor Principal'
+  | 'Coautor'
+  | 'Asesor'
+  | 'Coasesor'
+  | 'Colaborador';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Investigador/Docente (para vincular)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface InvestigadorResumen {
-  id:          string;
-  nombre:      string;
-  dni:         string;
+  id:           string;
+  nombre:       string;
+  dni:          string;
   departamento: string;
+  grupo?:       string;   // Grupo de investigación al que pertenece
+}
+
+/** Investigador vinculado a una producción con su rol */
+export interface InvestigadorVinculado {
+  investigador: InvestigadorResumen;
+  rol:          RolPublicacion;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,31 +67,34 @@ export interface InvestigadorResumen {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface RegistroProduccion {
-  id:                    string;
-  tipo:                  TipoProduccion;
-  titulo:                string;
-  autores:               string;        // "R. Perez, J. Doe" — texto libre del import
-  fecha:                 string;        // "YYYY-MM-DD"
-  fuente:                FuenteOrigen;
-  estado:                EstadoValidacion;
+  id:                      string;
+  tipo:                    TipoProduccion;
+  titulo:                  string;
+  autores:                 string;        // "R. Perez, J. Doe" — texto libre del import
+  fecha:                   string;        // "YYYY-MM-DD"
+  fuente:                  FuenteOrigen;
+  estado:                  EstadoValidacion;
 
   // Metadatos de artículos (opcionales para tesis)
-  revista?:              string;
-  issn?:                 string;
-  doi?:                  string;
-  cuartil?:              Cuartil;
+  revista?:                string;
+  issn?:                   string;
+  volNum?:                 string;        // "Vol 12, N° 4"
+  doi?:                    string;
+  cuartil?:                Cuartil;
 
   // Metadatos de tesis (opcionales para artículos)
-  tesista?:              string;
-  asesorSugerido?:       InvestigadorResumen;
-  asesorVinculado?:      InvestigadorResumen;
-  tipoTesis?:            'Pregrado' | 'Maestría' | 'Doctorado';
-  urlCybertesis?:        string;
+  tesista?:                string;
+  asesorSugerido?:         InvestigadorResumen;
+  tipoTesis?:              'Pregrado' | 'Maestría' | 'Doctorado';
+  urlCybertesis?:          string;
+
+  // Investigadores vinculados (con rol)
+  investigadoresVinculados: InvestigadorVinculado[];
 
   // Metadatos comunes de auditoría
-  importadoEn?:          string;        // ISO datetime
-  confirmadoPor?:        string;        // nombre del usuario
-  confirmadoEn?:         string;        // ISO datetime
+  importadoEn?:            string;        // ISO datetime
+  confirmadoPor?:          string;
+  confirmadoEn?:           string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,8 +113,11 @@ export interface FiltrosProduccion {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ConfirmarPayload {
-  id:             string;
-  doi?:           string;   // editable antes de confirmar
-  cuartil?:       Cuartil;  // editable antes de confirmar
-  asesorId?:      string;   // ID del investigador vinculado (EX1)
+  id:                      string;
+  doi?:                    string;
+  issn?:                   string;
+  volNum?:                 string;
+  revista?:                string;
+  cuartil?:                Cuartil;
+  investigadoresVinculados: { investigadorId: string; rol: RolPublicacion }[];
 }

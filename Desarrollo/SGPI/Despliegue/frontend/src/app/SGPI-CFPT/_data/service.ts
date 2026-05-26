@@ -103,21 +103,29 @@ export async function confirmarProduccion(payload: ConfirmarPayload): Promise<Re
   return res.json();
   ──────────────────────────────────────────────────────────────────────── */
 
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((r) => setTimeout(r, 700));
 
   const idx = MOCK_PRODUCCIONES.findIndex((p) => p.id === payload.id);
   if (idx === -1) throw new Error('Registro no encontrado.');
 
+  // Reconstruir investigadoresVinculados desde los IDs
+  const vinculados = payload.investigadoresVinculados.map(({ investigadorId, rol }) => {
+    const inv = MOCK_INVESTIGADORES.find((i) => i.id === investigadorId);
+    if (!inv) throw new Error(`Investigador ${investigadorId} no encontrado.`);
+    return { investigador: inv, rol };
+  });
+
   const updated: RegistroProduccion = {
     ...MOCK_PRODUCCIONES[idx],
-    estado:        'validado',
-    doi:           payload.doi            ?? MOCK_PRODUCCIONES[idx].doi,
-    cuartil:       payload.cuartil        ?? MOCK_PRODUCCIONES[idx].cuartil,
-    confirmadoPor: 'Ana Mendoza',
-    confirmadoEn:  new Date().toISOString(),
-    ...(payload.asesorId
-      ? { asesorVinculado: MOCK_INVESTIGADORES.find((i) => i.id === payload.asesorId) }
-      : {}),
+    estado:                  'validado',
+    doi:                     payload.doi     ?? MOCK_PRODUCCIONES[idx].doi,
+    issn:                    payload.issn    ?? MOCK_PRODUCCIONES[idx].issn,
+    volNum:                  payload.volNum  ?? MOCK_PRODUCCIONES[idx].volNum,
+    revista:                 payload.revista ?? MOCK_PRODUCCIONES[idx].revista,
+    cuartil:                 payload.cuartil ?? MOCK_PRODUCCIONES[idx].cuartil,
+    investigadoresVinculados: vinculados,
+    confirmadoPor:           'Ana Mendoza',
+    confirmadoEn:            new Date().toISOString(),
   };
   MOCK_PRODUCCIONES[idx] = updated;
   return updated;
