@@ -18,32 +18,35 @@ function addDays(days: number): string {
 export const MOCK_CONVOCATORIAS: Convocatoria[] = [
   // ── Vence en 2 días (ROJO) ────────────────────────────────────────────────
   {
-    id:            'CONV-2026-001',
-    nombre:        'Proyectos de Investigación con Asignación (PMI)',
-    entidad:       'VRIP — UNMSM',
-    programa:      'Programa de Mejora Institucional',
-    estado:        'Activa',
-    fechaCierre:   addDays(2),
-    fuente:        'RAIS',
-    ultimaSync:    '25 May 2026, 08:00 AM',
-    cronogramaModificado: false,
-    descripcion:   'Convocatoria para proyectos de investigación con asignación presupuestal del Programa de Mejora Institucional 2026. Dirigida a docentes con categoría principal o asociado.',
-    evidencias:    [],
+    id:                    'CONV-2026-001',
+    nombre:                'Proyectos de Investigación con Asignación (PMI)',
+    entidad:               'VRIP — UNMSM',
+    programa:              'Programa de Mejora Institucional',
+    estado:                'Activa',
+    apertura:              addDays(-60),      // Abrió 60 días atrás
+    fechaCierre:           addDays(2),
+    cierreOriginal:        addDays(30),       // Originalmente cerraba en 30 días
+    fuente:                'RAIS',
+    ultimaSync:            '25 May 2026, 08:00 AM',
+    cronogramaModificado:  true,
+    descripcion:           'Convocatoria para proyectos de investigación con asignación presupuestal del Programa de Mejora Institucional 2026. Dirigida a docentes con categoría principal o asociado.',
+    evidencias:            [],
   },
 
   // ── Vence en 6 días (AMARILLO) ────────────────────────────────────────────
   {
-    id:            'CONV-2026-002',
-    nombre:        'Convocatoria para Grupos de Estudio Estudiantiles',
-    entidad:       'VRIP — UNMSM',
-    programa:      'Fondos de Difusión Académica',
-    estado:        'Activa',
-    fechaCierre:   addDays(6),
-    fuente:        'RAIS',
-    ultimaSync:    '25 May 2026, 08:00 AM',
-    cronogramaModificado: false,
-    descripcion:   'Convocatoria destinada al financiamiento de grupos de estudio estudiantiles en la UNMSM. Los grupos deben contar con asesor docente y un mínimo de 5 integrantes matriculados.',
-    evidencias:    [],
+    id:                    'CONV-2026-002',
+    nombre:                'Convocatoria para Grupos de Estudio Estudiantiles',
+    entidad:               'VRIP — UNMSM',
+    programa:              'Fondos de Difusión Académica',
+    estado:                'Activa',
+    apertura:              addDays(-20),
+    fechaCierre:           addDays(6),
+    fuente:                'RAIS',
+    ultimaSync:            '25 May 2026, 08:00 AM',
+    cronogramaModificado:  false,
+    descripcion:           'Convocatoria destinada al financiamiento de grupos de estudio estudiantiles en la UNMSM. Los grupos deben contar con asesor docente y un mínimo de 5 integrantes matriculados.',
+    evidencias:            [],
   },
 
   // ── Vence en 12 días (VERDE) ──────────────────────────────────────────────
