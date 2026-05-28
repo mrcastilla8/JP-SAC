@@ -62,6 +62,7 @@ class AsesorTesisInput(BaseModel):
     url_cybertesis: str
     titulo_tesis: str
     dni_asesor: Optional[str] = None # Sometimes they extract it, sometimes they don't
+    autor_estudiante_texto: Optional[str] = None
 
 class BulkAsesorTesisPayload(BaseReconciliationPayload):
     registros: List[AsesorTesisInput]
