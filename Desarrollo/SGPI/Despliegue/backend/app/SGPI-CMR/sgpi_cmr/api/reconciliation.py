@@ -4,6 +4,7 @@ from sqlalchemy.future import select
 from typing import Dict, Any, List
 
 from app.db.session import get_db
+from app.core.security import require_staff
 from app.models.domain import Investigador, Proyecto, Publicacion, Tesis, ReconciliacionPendiente
 from sgpi_cmr.schemas.incoming import BulkInvestigadorPayload, BulkProyectoPayload, BulkPublicacionPayload, BulkAsesorTesisPayload
 from sgpi_cmr.services.rules_engine import rules_engine
@@ -12,7 +13,11 @@ from sgpi_cmr.services.persister import persister
 router = APIRouter()
 
 @router.post("/bulk/investigators", summary="Reconciliar investigadores en bulk", status_code=status.HTTP_202_ACCEPTED)
-async def reconcile_investigadores_bulk(payload: BulkInvestigadorPayload, db: AsyncSession = Depends(get_db)):
+async def reconcile_investigadores_bulk(
+    payload: BulkInvestigadorPayload, 
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff)
+):
     fuente = payload.fuente_origen
     stats = {"procesados": 0, "resueltos": 0, "cuarentena": 0}
     
@@ -46,7 +51,11 @@ async def reconcile_investigadores_bulk(payload: BulkInvestigadorPayload, db: As
 
 
 @router.post("/bulk/projects", summary="Reconciliar proyectos en bulk", status_code=status.HTTP_202_ACCEPTED)
-async def reconcile_proyectos_bulk(payload: BulkProyectoPayload, db: AsyncSession = Depends(get_db)):
+async def reconcile_proyectos_bulk(
+    payload: BulkProyectoPayload, 
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff)
+):
     fuente = payload.fuente_origen
     stats = {"procesados": 0, "resueltos": 0, "cuarentena": 0}
     
@@ -78,7 +87,11 @@ async def reconcile_proyectos_bulk(payload: BulkProyectoPayload, db: AsyncSessio
 
 
 @router.post("/bulk/publications", summary="Reconciliar publicaciones en bulk", status_code=status.HTTP_202_ACCEPTED)
-async def reconcile_publicaciones_bulk(payload: BulkPublicacionPayload, db: AsyncSession = Depends(get_db)):
+async def reconcile_publicaciones_bulk(
+    payload: BulkPublicacionPayload, 
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff)
+):
     fuente = payload.fuente_origen
     stats = {"procesados": 0, "resueltos": 0, "cuarentena": 0}
     
@@ -90,7 +103,7 @@ async def reconcile_publicaciones_bulk(payload: BulkPublicacionPayload, db: Asyn
         if registro.doi_codigo:
             stmt = stmt.where(Publicacion.doi_codigo == registro.doi_codigo)
         else:
-            stmt = stmt.where(Publicacion.titulo_articulo == registro.titulo_articulo)
+            stmt = stmt.where(Publicacion.titulo_articulo.ilike(f"%{registro.titulo_articulo}%"))
             
         res = await db.execute(stmt)
         existing_obj = res.scalars().first()
@@ -118,7 +131,11 @@ async def reconcile_publicaciones_bulk(payload: BulkPublicacionPayload, db: Asyn
 
 
 @router.post("/bulk/theses_advisors", summary="Reconciliar asesores de tesis (Cybertesis)", status_code=status.HTTP_202_ACCEPTED)
-async def reconcile_asesores_tesis(payload: BulkAsesorTesisPayload, db: AsyncSession = Depends(get_db)):
+async def reconcile_asesores_tesis(
+    payload: BulkAsesorTesisPayload, 
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff)
+):
     fuente = payload.fuente_origen
     stats = {"procesados": 0, "resueltos": 0, "cuarentena": 0}
     
@@ -152,7 +169,10 @@ async def reconcile_asesores_tesis(payload: BulkAsesorTesisPayload, db: AsyncSes
 # ==========================================
 
 @router.get("/quarantine", summary="Obtener registros en cuarentena")
-async def get_quarantine_items(db: AsyncSession = Depends(get_db)):
+async def get_quarantine_items(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff)
+):
     result = await db.execute(select(ReconciliacionPendiente).where(ReconciliacionPendiente.estado == 'Pendiente'))
     items = result.scalars().all()
     
@@ -171,7 +191,12 @@ async def get_quarantine_items(db: AsyncSession = Depends(get_db)):
     ]
 
 @router.post("/quarantine/{id_pendiente}/resolve", summary="Resolver un item de cuarentena")
-async def resolve_quarantine_item(id_pendiente: int, action: str, db: AsyncSession = Depends(get_db)):
+async def resolve_quarantine_item(
+    id_pendiente: int, 
+    action: str, 
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff)
+):
     if action not in ["aprobar", "rechazar"]:
         raise HTTPException(status_code=400, detail="Acción inválida. Usa 'aprobar' o 'rechazar'.")
         
