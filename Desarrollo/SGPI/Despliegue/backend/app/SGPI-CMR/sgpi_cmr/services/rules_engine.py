@@ -47,7 +47,7 @@ class ReconciliationRulesEngine:
             else:
                 if fuente == 'RAIS' and current.get(field):
                     pass # RAIS nunca pisa datos que ya existen (Regla de oro simplificada)
-                elif not current.get(field) or self._is_manual_override(current, field) == False:
+                elif not current.get(field) or self._is_manual_override(current, field) == True:
                     merged[field] = value
                     
         return merged, requires_quarantine, reason
@@ -59,11 +59,11 @@ class ReconciliationRulesEngine:
 
         merged = current.copy()
         
-        # Regla: VRIP gana a RAIS
+        # Regla: VRIP gana a RAIS pero solo en campos críticos
         for field, value in incoming_dict.items():
-            if fuente == 'VRIP':
+            if fuente == 'VRIP' and field in ['estado_proyecto', 'fecha_inicio', 'resolucion_aprobacion', 'presupuesto_asignado']:
                 merged[field] = value
-            elif fuente == 'RAIS' and not current.get(field):
+            elif not current.get(field):
                 merged[field] = value
 
         return merged, False, ""

@@ -221,3 +221,13 @@ class ReconciliacionPendiente(Base):
     fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     fecha_revision = Column(DateTime(timezone=True))
 
+class SnapshotPOI(Base):
+    __tablename__ = 'snapshot_poi'
+    id_snapshot = Column(Integer, primary_key=True, autoincrement=True)
+    periodo_corte = Column(String(50), nullable=False)
+    tipo_reporte = Column(String(100), nullable=False)
+    id_usuario_emisor = Column(UUID(as_uuid=True), ForeignKey('usuario.id_usuario', ondelete='SET NULL'))
+    parametros_aplicados = Column(JSON)
+    datos_serializados = Column(JSON, nullable=False)
+    timestamp_generacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+

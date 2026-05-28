@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, insert, delete
+from sqlalchemy.sql import func
 from typing import Dict, Any, List
 from app.models.domain import ReconciliacionPendiente, LogAuditoria, Investigador, Proyecto, Publicacion, Tesis
 
@@ -48,7 +49,7 @@ class ReconciliationPersister:
                     merged_data['departamento_academico'] = 'No Especificado'
 
                 if existing:
-                    await db.execute(update(Investigador).where(Investigador.dni == llave_pk).values(**merged_data))
+                    await db.execute(update(Investigador).where(Investigador.dni == llave_pk).values(**merged_data, updated_at=func.now()))
                     is_update = True
                 else:
                     await db.execute(insert(Investigador).values(**merged_data))
@@ -56,7 +57,7 @@ class ReconciliationPersister:
             elif entidad == "proyecto":
                 result = await db.execute(select(Proyecto).where(Proyecto.codigo_proyecto == llave_pk))
                 if result.scalars().first():
-                    await db.execute(update(Proyecto).where(Proyecto.codigo_proyecto == llave_pk).values(**merged_data))
+                    await db.execute(update(Proyecto).where(Proyecto.codigo_proyecto == llave_pk).values(**merged_data, updated_at=func.now()))
                     is_update = True
                 else:
                     await db.execute(insert(Proyecto).values(**merged_data))
@@ -89,7 +90,7 @@ class ReconciliationPersister:
                     "titulo_tesis": merged_data.get("titulo_tesis", "Sin Título"),
                     "asesor_texto": merged_data.get("asesor_texto", ""),
                     "dni_asesor": merged_data.get("dni_asesor_reconciliado", None),
-                    "autor_estudiante_texto": merged_data.get("autor_estudiante_texto", "No especificado")
+                    "autor_estudiante_texto": merged_data.get("autor_estudiante_texto")
                 }
                 
                 if existing:
