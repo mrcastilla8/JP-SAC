@@ -12,7 +12,7 @@ import { useAsyncJob } from '@/SGPI-CFU/lib/hooks/useAsyncJob';
  * simplemente importa el componente `ExportButton` y colócalo en tu interfaz:
  * 
  * ```tsx
- * import { ExportButton } from '@/SGPI-CFU/components/export/ExportFlow';
+ * import { ExportButton } from '@/SGPI-CFU/components/SGPI-CFE/export/ExportFlow';
  * 
  * export default function MiPantalla() {
  *   return (
@@ -51,7 +51,7 @@ export function ExportButton({ context, label = "Exportar..." }: { context: stri
       </button>
 
       {isOpen && (
-        <ExportFlowManager context={context} onClose={() => setIsOpen(false)} />
+        <ExportFlow context={context} onClose={() => setIsOpen(false)} />
       )}
     </>
   );
@@ -63,9 +63,9 @@ export function ExportButton({ context, label = "Exportar..." }: { context: stri
 type ExportFormat = 'pdf' | 'excel';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Componente Manager del Flujo de Exportación
+// Componente Modal del Flujo de Exportación
 // ─────────────────────────────────────────────────────────────────────────────
-function ExportFlowManager({ context, onClose }: { context: string, onClose: () => void }) {
+export function ExportFlow({ context, onClose }: { context: string, onClose: () => void }) {
   const [format, setFormat] = useState<ExportFormat>('pdf');
   
   // Usamos una ref para evitar problemas de "stale closure" dentro del setInterval de useAsyncJob
