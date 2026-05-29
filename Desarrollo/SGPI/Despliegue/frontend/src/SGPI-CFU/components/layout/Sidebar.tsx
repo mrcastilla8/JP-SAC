@@ -186,10 +186,11 @@ const NAV_ITEMS: NavItem[] = [
     icon:  FolderIcon,
   },
   {
-    id:    'investigators',
-    label: 'Docentes/Inv.',
-    href:  '/investigators',
-    icon:  UserIcon,
+    id:            'investigators',
+    label:         'Docentes/Inv.',
+    href:          '/investigators',
+    icon:          UserIcon,
+    matchPrefixes: ['/investigators', '/SGPI-CFMH'],
   },
   {
     id:    'groups',
