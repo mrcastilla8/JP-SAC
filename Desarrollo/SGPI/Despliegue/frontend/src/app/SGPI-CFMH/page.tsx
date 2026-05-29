@@ -534,18 +534,11 @@ function DocenteRow({ doc, onEdit, onView }: {
 
       {/* Acciones */}
       <td className="px-5 py-4">
-        <div className="flex items-center gap-1">
-          <button onClick={onEdit}
-            className="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container hover:text-[#001631] transition-colors"
-            aria-label={`Editar perfil de ${doc.apellidos}, ${doc.nombres}`}>
-            <EditIcon />
-          </button>
-          <button onClick={onView}
-            className="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container hover:text-[#001631] transition-colors"
-            aria-label={`Ver perfil de ${doc.apellidos}, ${doc.nombres}`}>
-            <EyeIcon />
-          </button>
-        </div>
+        <button onClick={onView}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded font-sans font-semibold text-[12px] text-on-surface border border-outline-variant hover:bg-surface-container hover:border-[#001631] transition-colors whitespace-nowrap"
+          aria-label={`Ver y editar perfil de ${doc.apellidos}, ${doc.nombres}`}>
+          <EditIcon /> Ver / Editar
+        </button>
       </td>
 
     </tr>
