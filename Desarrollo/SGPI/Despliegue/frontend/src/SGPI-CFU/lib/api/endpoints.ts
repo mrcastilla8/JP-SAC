@@ -17,7 +17,7 @@
  * - search:        Búsqueda global
  */
 
-import { apiClient, HEAVY_TIMEOUT_MS } from './client';
+import { apiClient, HEAVY_TIMEOUT_MS, ApiClientError } from './client';
 import { getAccessToken }              from '../auth/storage';
 import type {
   LoginCredentials, LoginResponse, RefreshResponse, AuthUser,
@@ -38,7 +38,24 @@ export const authEndpoints = {
    * POST /api/v1/auth/login
    */
   login(credentials: LoginCredentials): Promise<LoginResponse> {
-    return apiClient.post<LoginResponse>('/auth/login', credentials);
+    // MOCK LOGIN LIBRE PARA PRUEBAS SIN BACKEND
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          accessToken: 'mock.jwt.token',
+          refreshToken: 'mock.refresh.token',
+          user: {
+            id: '1',
+            email: credentials.email || 'usuario@unmsm.edu.pe',
+            name: 'Usuario de Pruebas',
+            role: 'ADMINISTRATOR',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        });
+      }, 500); // 500ms de retraso para simular carga
+    });
   },
 
   /**
