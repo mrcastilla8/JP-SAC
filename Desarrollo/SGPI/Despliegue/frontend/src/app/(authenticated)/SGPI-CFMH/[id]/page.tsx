@@ -2,11 +2,11 @@
 
 /**
  * @file [id]/page.tsx
- * @route /SGPI-CFMH/[id]
+ * @route /investigadores/[id]
  * @description Perfil editable de Docente/Investigador.
  * Accesible desde:
  *   - Ícono 👁 (vista/edición combinada)
- *   - Ícono ✏  (alias /SGPI-CFMH/[id]/editar → redirige aquí)
+ *   - Ícono ✏  (alias /investigadores/[id]/editar → redirige aquí)
  *
  * Secciones:
  *   1. Información General (DNI readonly + validado, nombres, apellidos, depto, estado)
@@ -23,8 +23,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
 import type { DocenteInvestigador, NivelRenacyt, EstadoVigencia } from '../_data/types';
-import { getDocenteById, actualizarDocente } from '../_data/service';
-import { DEPARTAMENTOS, NIVELES_RENACYT } from '../_data/mock';
+import { getDocenteById, actualizarDocente, getDepartamentos, getNivelesRenacyt } from '../_data/service';
+import { validateInstitutionalEmail } from '@/SGPI-CFU/lib/utils/validators';
+import { apiClient } from '@/SGPI-CFU/lib/api/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Íconos
@@ -187,6 +188,25 @@ export default function DocentePerfilPage() {
   const [historial, setHistorial] = useState<{ anio: number; puntaje: string }[]>([]);
   const [histErrors, setHistErrors] = useState<boolean[]>([]);
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
+  const [departamentos, setDepartamentos] = useState<string[]>([]);
+  const [nivelesRenacyt, setNivelesRenacyt] = useState<string[]>([]);
+
+  // ── Cargar catálogos ────────────────────────────────────────────────────────
+  useEffect(() => {
+    async function loadCatalogos() {
+      try {
+        const [depts, nivs] = await Promise.all([
+          getDepartamentos(),
+          getNivelesRenacyt(),
+        ]);
+        setDepartamentos(depts);
+        setNivelesRenacyt(nivs);
+      } catch (err) {
+        console.error('Error al cargar catálogos en perfil:', err);
+      }
+    }
+    loadCatalogos();
+  }, []);
 
   // ── Cargar docente ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -237,15 +257,119 @@ export default function DocentePerfilPage() {
     const errs: string[] = [];
     if (!nombres.trim()) errs.push('nombres');
     if (!apellidos.trim()) errs.push('apellidos');
-    if (!email.trim()) errs.push('email');
+    
+    const emailErr = validateInstitutionalEmail(email);
+    if (emailErr) errs.push('email');
+
     if (!departamento) errs.push('departamento');
     setFieldErrors(errs);
     if (errs.length > 0) {
-      setAlert({ msg: 'Debe completar todos los campos obligatorios para guardar el perfil.', type: 'error' });
+      if (emailErr && email.trim()) {
+        setAlert({ msg: emailErr, type: 'error' });
+      } else {
+        setAlert({ msg: 'Debe completar todos los campos obligatorios para guardar el perfil.', type: 'error' });
+      }
       return false;
     }
     return true;
   }, [nombres, apellidos, email, departamento]);
+
+  const [isSavingImport, setIsSavingImport] = useState(false);
+
+  const handleImportar = async () => {
+    setAlert(null);
+    setIsSavingImport(true);
+    try {
+      const updated = await actualizarDocente(id, {
+        dni: doc!.dni,
+        nombres,
+        apellidos,
+        email,
+        departamento: departamento || 'Externo (RENACYT)',
+        nivelRenacyt: nivel,
+        condicionSM: esSM ? 'SM' : 'No SM',
+        estado,
+        puntajeHistorico: historial.map((h) => ({
+          anio: h.anio, puntaje: parseFloat(h.puntaje),
+          articulos: 0, tesis: 0, proyectos: 0,
+        })),
+        isExternal: false
+      });
+      setDoc(updated);
+      if (updated.departamento) setDepartamento(updated.departamento);
+      setAlert({ msg: 'El investigador ha sido importado con éxito a la base de datos local.', type: 'success' });
+    } catch (err) {
+      setAlert({ msg: 'Ocurrió un error al importar el investigador.', type: 'error' });
+    } finally {
+      setIsSavingImport(false);
+    }
+  };
+
+  const [showSincronizar, setShowSincronizar] = useState(false);
+  const [tesisExternas, setTesisExternas] = useState<any[]>([]);
+  const [loadingTesis, setLoadingTesis] = useState(false);
+  const [importingTesisUrls, setImportingTesisUrls] = useState<Record<string, boolean>>({});
+  const [importedUrls, setImportedUrls] = useState<Set<string>>(new Set());
+  const [modalSearchTerm, setModalSearchTerm] = useState('');
+
+  const buscarTesisExternas = async (queryTerm?: string) => {
+    setLoadingTesis(true);
+    setTesisExternas([]);
+    const term = queryTerm !== undefined ? queryTerm : modalSearchTerm || `${nombres} ${apellidos}`;
+    try {
+      const data = await apiClient.get<any[]>(`/theses/external?q=${encodeURIComponent(term)}&limit=15`);
+      setTesisExternas(data);
+      
+      const checkPromises = data.map(async (t) => {
+        try {
+          await apiClient.get(`/theses/${encodeURIComponent(t.url_cybertesis)}`);
+          return { url: t.url_cybertesis, imported: true };
+        } catch {
+          return { url: t.url_cybertesis, imported: false };
+        }
+      });
+      const results = await Promise.all(checkPromises);
+      const newImported = new Set<string>();
+      results.forEach(r => {
+        if (r.imported) newImported.add(r.url);
+      });
+      setImportedUrls(newImported);
+    } catch (err) {
+      console.error(err);
+      setAlert({ msg: 'Error al buscar tesis externas.', type: 'error' });
+    } finally {
+      setLoadingTesis(false);
+    }
+  };
+
+  const handleImportarIndividual = async (tesis: any) => {
+    setImportingTesisUrls((prev) => ({ ...prev, [tesis.url_cybertesis]: true }));
+    try {
+      const payload = {
+        ...tesis,
+        dni_asesor: doc!.dni
+      };
+      await apiClient.post('/theses', payload);
+      setImportedUrls((prev) => {
+        const next = new Set(prev);
+        next.add(tesis.url_cybertesis);
+        return next;
+      });
+    } catch (err) {
+      console.error(err);
+      setAlert({ msg: 'Error al importar la tesis.', type: 'error' });
+    } finally {
+      setImportingTesisUrls((prev) => ({ ...prev, [tesis.url_cybertesis]: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (showSincronizar && doc) {
+      const initialTerm = `${nombres} ${apellidos}`;
+      setModalSearchTerm(initialTerm);
+      buscarTesisExternas(initialTerm);
+    }
+  }, [showSincronizar, doc]);
 
   // ── Guardar ────────────────────────────────────────────────────────────────
   const handleGuardar = async () => {
@@ -260,16 +384,15 @@ export default function DocentePerfilPage() {
         nivelRenacyt: nivel,
         condicionSM: esSM ? 'SM' : 'No SM',
         estado,
+        isExternal: false,
         puntajeHistorico: historial.map((h) => ({
           anio: h.anio, puntaje: parseFloat(h.puntaje),
           articulos: 0, tesis: 0, proyectos: 0,
         })),
       });
-      setAlert({ msg: 'Perfil guardado exitosamente.', type: 'success' });
-      setTimeout(() => router.push('/SGPI-CFMH'), 1200);
+      router.push('/investigadores');
     } catch {
       setAlert({ msg: 'Error al guardar el perfil. Intente nuevamente.', type: 'error' });
-    } finally {
       setIsSaving(false);
     }
   };
@@ -295,7 +418,7 @@ export default function DocentePerfilPage() {
       <MainLayout title="Sistema de Gestión de Proyectos de Investigación">
         <div className="text-center py-20">
           <p className="font-sans font-semibold text-[14px] text-on-surface mb-2">Docente no encontrado.</p>
-          <button onClick={() => router.push('/SGPI-CFMH')}
+          <button onClick={() => router.push('/investigadores')}
             className="font-sans text-[13px] text-[#2563eb] hover:underline">
             Volver al directorio
           </button>
@@ -316,14 +439,41 @@ export default function DocentePerfilPage() {
           <h1 className="font-heading font-semibold text-h1 text-on-surface">
             Perfil de Docente/Investigador
           </h1>
-          <button onClick={() => router.push('/SGPI-CFMH')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded font-sans font-semibold text-[13px] text-on-surface border border-outline-variant hover:bg-surface-container transition-colors"
-            aria-label="Volver al directorio">
-            <BackIcon /> Volver al directorio
-          </button>
+          <div className="flex items-center gap-2">
+            {!doc.isExternal && (
+              <button
+                type="button"
+                onClick={() => setShowSincronizar(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#0284c7] hover:bg-[#0369a1] rounded font-sans font-semibold text-[13px] text-white transition-colors"
+              >
+                Sincronizar Cybertesis
+              </button>
+            )}
+            <button onClick={() => router.push('/investigadores')}
+              className="flex items-center gap-1.5 px-4 py-2 rounded font-sans font-semibold text-[13px] text-on-surface border border-outline-variant hover:bg-surface-container transition-colors"
+              aria-label="Volver al directorio">
+              <BackIcon /> Volver al directorio
+            </button>
+          </div>
         </div>
 
         {alert && <AlertBanner message={alert.msg} type={alert.type} />}
+
+        {doc.isExternal && (
+          <div className="bg-[#fff9db] border border-[#ffe066] text-[#8c6d00] px-4 py-4 rounded font-sans text-[13px] mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+            <div>
+              <span className="font-bold block mb-0.5">Investigador Externo (Buscado en RENACYT)</span>
+              Este investigador proviene de la base de datos externa de RENACYT y no está importado oficialmente en el sistema local.
+            </div>
+            <button
+              onClick={handleImportar}
+              disabled={isSaving || isSavingImport}
+              className="bg-[#e67e22] hover:bg-[#d35400] text-white font-semibold py-2 px-4 rounded shadow transition-all duration-150 flex items-center justify-center gap-1.5 whitespace-nowrap self-start md:self-auto"
+            >
+              {isSavingImport ? 'Importando...' : 'Importar a Base de Datos'}
+            </button>
+          </div>
+        )}
 
         <div>
 
@@ -371,7 +521,7 @@ export default function DocentePerfilPage() {
                     onChange={setDepartamento}
                     options={[
                       { value: '', label: 'Seleccione...' },
-                      ...DEPARTAMENTOS.map((d) => ({ value: d, label: d })),
+                      ...departamentos.map((d) => ({ value: d, label: d })),
                     ]}
                   />
                 </div>
@@ -411,7 +561,7 @@ export default function DocentePerfilPage() {
                 <Label text="Nivel Renacyt Actual" />
                 <SelectField id="nivel-renacyt" value={nivel}
                   onChange={(v) => setNivel(v as NivelRenacyt)}
-                  options={NIVELES_RENACYT.map((n) => ({ value: n, label: n }))}
+                  options={nivelesRenacyt.map((n) => ({ value: n, label: n }))}
                 />
               </div>
 
@@ -449,7 +599,7 @@ export default function DocentePerfilPage() {
                 </p>
               </div>
               <button
-                onClick={() => router.push(`/SGPI-CFMH/${id}/historial`)}
+                onClick={() => router.push(`/investigadores/${id}/historial`)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded font-sans font-semibold text-[12px] text-white bg-[#001631] hover:bg-[#002b54] transition-colors"
                 aria-label="Ver historial completo de proyectos del investigador"
               >
@@ -509,7 +659,7 @@ export default function DocentePerfilPage() {
 
       {/* ── Barra fija inferior ──────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-end gap-3 px-6 py-4 bg-white border-t border-outline-variant shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-        <button onClick={() => router.push('/SGPI-CFMH')}
+        <button onClick={() => router.push('/investigadores')}
           className="px-5 py-2 rounded font-sans font-semibold text-[12px] text-on-surface border border-outline-variant hover:bg-surface-container transition-colors uppercase tracking-wide"
           aria-label="Cancelar modificaciones">
           Cancelar Modificaciones
@@ -530,6 +680,110 @@ export default function DocentePerfilPage() {
           )}
         </button>
       </div>
+
+      {showSincronizar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog" aria-modal="true" aria-label="Sincronización de Tesis">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setShowSincronizar(false)} aria-hidden="true" />
+          <div className="relative w-full max-w-[680px] bg-white rounded-xl shadow-2xl border border-[#e2e8f0] overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[#e2e8f0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                <h2 className="font-heading font-bold text-[16px] text-on-surface">
+                  Sincronización de Tesis desde Cybertesis (UNMSM)
+                </h2>
+              </div>
+              <button onClick={() => setShowSincronizar(false)} className="text-on-surface-variant hover:text-on-surface text-[22px] leading-none font-light" aria-label="Cerrar">×</button>
+            </div>
+            {/* Buscador */}
+            <div className="px-5 py-3 border-b border-[#e2e8f0] bg-slate-50">
+              <div className="flex gap-2">
+                <input type="text" value={modalSearchTerm}
+                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                  placeholder="Nombre de autor o asesor..."
+                  className="flex-1 px-3 py-2 font-sans text-[13px] text-on-surface border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa] transition-all bg-white"
+                />
+                <button
+                  onClick={() => buscarTesisExternas()}
+                  disabled={loadingTesis}
+                  className="px-4 py-2 bg-[#001631] text-white rounded font-sans font-semibold text-[12px] hover:bg-[#002b54] transition-colors"
+                >
+                  {loadingTesis ? 'Buscando...' : 'Buscar'}
+                </button>
+              </div>
+            </div>
+            {/* Contenido / Listado */}
+            <div className="overflow-y-auto flex-1 px-5 py-4">
+              {loadingTesis && (
+                <div className="py-12 text-center font-sans text-[13px] text-on-surface-variant flex flex-col items-center gap-3">
+                  <svg className="animate-spin text-[#0284c7]" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  <span>Consultando repositorio de Cybertesis UNMSM...</span>
+                </div>
+              )}
+              {!loadingTesis && tesisExternas.length === 0 && (
+                <div className="py-12 text-center font-sans text-[13px] text-on-surface-variant">
+                  No se encontraron tesis para &ldquo;{modalSearchTerm}&rdquo;. Intente ajustando el término de búsqueda.
+                </div>
+              )}
+              {!loadingTesis && tesisExternas.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {tesisExternas.map((t) => {
+                    const isImported = importedUrls.has(t.url_cybertesis);
+                    const isImportingThis = importingTesisUrls[t.url_cybertesis] || false;
+                    return (
+                      <div key={t.url_cybertesis} className="p-3 border border-[#e2e8f0] rounded-lg hover:bg-slate-50 transition-colors flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-sans font-semibold text-[13px] text-on-surface mb-1 line-clamp-2">
+                            {t.titulo_tesis}
+                          </h3>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 font-sans text-[11px] text-on-surface-variant">
+                            <span><span className="font-medium text-slate-700">Autor:</span> {t.autor_estudiante_texto}</span>
+                            <span>•</span>
+                            <span><span className="font-medium text-slate-700">Asesor:</span> {t.asesor_texto}</span>
+                            <span>•</span>
+                            <span><span className="font-medium text-slate-700">Año:</span> {t.anio_publicacion}</span>
+                            <span>•</span>
+                            <span><span className="font-medium text-slate-700">Grado:</span> {t.nivel_grado}</span>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {isImported ? (
+                            <span className="inline-flex px-2 py-1 rounded bg-green-50 font-sans font-semibold text-[11px] text-green-700 border border-green-200 whitespace-nowrap">
+                              ✓ Vinculado
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleImportarIndividual(t)}
+                              disabled={isImportingThis}
+                              className="px-3 py-1.5 bg-[#e67e22] hover:bg-[#d35400] text-white rounded font-sans font-semibold text-[11px] disabled:opacity-50 transition-colors whitespace-nowrap shadow-sm"
+                            >
+                              {isImportingThis ? 'Importando...' : 'Importar y Vincular'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-[#e2e8f0] bg-slate-50 flex justify-end">
+              <button
+                onClick={() => setShowSincronizar(false)}
+                className="px-4 py-2 border border-[#e2e8f0] bg-white hover:bg-slate-50 font-sans text-[13px] text-[#475569] rounded transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </MainLayout>
   );
