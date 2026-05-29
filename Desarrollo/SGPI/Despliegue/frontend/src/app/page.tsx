@@ -1,5 +1,5 @@
-import GestionDeCuentasActivasPage from './SGPI-CFSA/Gestion_de_Cuentas_Activas/page';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return <GestionDeCuentasActivasPage />;
+  redirect('/SGPI-CFIS/login');
 }
