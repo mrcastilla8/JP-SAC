@@ -141,10 +141,10 @@ export default function FichaGrupoPage() {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-heading font-bold text-[22px] text-[#0f172a] leading-tight">
+            <h1 className="font-heading font-semibold text-h1 text-on-surface leading-[38px]">
               Ficha Consolidada de Grupo
             </h1>
-            <p className="font-sans text-[13px] text-[#64748b] mt-0.5">
+            <p className="font-sans text-body-md text-on-surface-variant mt-0.5">
               Vista oficial certificada para auditoría y reportes POI.
             </p>
           </div>
@@ -152,14 +152,14 @@ export default function FichaGrupoPage() {
           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
             <button
               onClick={() => router.push('/SGPI-CFGI')}
-              className="flex items-center gap-1.5 border border-[#e2e8f0] hover:bg-slate-50 font-sans text-[13px] text-[#475569] px-4 py-2 rounded transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 border border-outline-variant hover:bg-surface-container font-sans text-[13px] text-on-surface px-4 py-2 rounded transition-colors cursor-pointer"
             >
               <BackIcon />
               Volver a Bandeja
             </button>
             <button
               onClick={() => setShowExportFlow(true)}
-              className="flex items-center gap-1.5 bg-white border border-[#e2e8f0] hover:bg-slate-50 font-sans font-bold text-[13px] text-[#0f172a] px-4 py-2 rounded transition-colors cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant hover:bg-surface-container font-sans font-bold text-[13px] text-on-surface px-4 py-2 rounded transition-colors cursor-pointer shadow-sm"
             >
               <ExportIcon />
               Exportar Ficha
@@ -174,34 +174,34 @@ export default function FichaGrupoPage() {
           <div className="lg:col-span-2 flex flex-col gap-5">
 
             {/* Identificación Institucional */}
-            <div className="bg-white border border-[#e2e8f0] rounded p-6 relative">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded p-6 shadow-level-1 relative">
               {/* Badge de estado arriba a la derecha */}
               <div className="absolute top-4 right-4">
                 <EstadoBadge estado={grupo.status} />
               </div>
 
-              <p className="font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-widest mb-4">
+              <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-4">
                 Identificación Institucional
               </p>
 
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-4">
                 <div>
-                  <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold">Código Oficial</p>
-                  <p className="font-sans font-bold text-[13px] text-[#0f172a] mt-0.5">{grupo.code}</p>
+                  <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Código Oficial</p>
+                  <p className="font-sans font-bold text-[13px] text-on-surface mt-0.5">{grupo.code}</p>
                 </div>
                 <div>
-                  <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold">Fecha Registro</p>
-                  <p className="font-sans font-bold text-[13px] text-[#0f172a] mt-0.5">{formatearFecha(grupo.recognitionDate || grupo.createdAt)}</p>
+                  <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Fecha Registro</p>
+                  <p className="font-sans font-bold text-[13px] text-on-surface mt-0.5">{formatearFecha(grupo.recognitionDate || grupo.createdAt)}</p>
                 </div>
               </div>
 
               <div className="mb-4">
-                <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold mb-1">Nombre del Grupo</p>
-                <p className="font-sans font-bold text-[15px] text-[#0f172a] leading-snug">{grupo.name}</p>
+                <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Nombre del Grupo</p>
+                <p className="font-sans font-bold text-[15px] text-on-surface leading-snug">{grupo.name}</p>
               </div>
 
               <div>
-                <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold mb-2">Línea de Investigación Principal</p>
+                <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-2">Línea de Investigación Principal</p>
                 <div className="flex flex-wrap gap-2">
                   {grupo.researchLines.map((l, i) => (
                     <span key={i} className="inline-flex items-center gap-1.5 bg-[#dbeafe] text-[#1e40af] font-sans font-semibold text-[12px] px-3 py-1 rounded">
@@ -214,42 +214,42 @@ export default function FichaGrupoPage() {
             </div>
 
             {/* Productividad Científica */}
-            <div className="bg-white border border-[#e2e8f0] rounded p-6">
-              <p className="font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-widest mb-4">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded p-6 shadow-level-1">
+              <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-4">
                 Productividad Científica
               </p>
               <div className="grid grid-cols-3 gap-4">
-                <div className="border border-[#e2e8f0] rounded p-4 text-center">
-                  <p className="font-heading font-bold text-[32px] text-[#0f172a]">{proyectosActivos}</p>
-                  <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold mt-1">Proyectos Activos</p>
+                <div className="border border-outline-variant rounded p-4 text-center bg-surface-container-low">
+                  <p className="font-heading font-bold text-[32px] text-on-surface">{proyectosActivos}</p>
+                  <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mt-1">Proyectos Activos</p>
                 </div>
-                <div className="border border-[#e2e8f0] rounded p-4 text-center">
-                  <p className="font-heading font-bold text-[32px] text-[#0f172a]">{articulosScopus}</p>
-                  <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold mt-1">Artículos (Scopus)</p>
+                <div className="border border-outline-variant rounded p-4 text-center bg-surface-container-low">
+                  <p className="font-heading font-bold text-[32px] text-on-surface">{articulosScopus}</p>
+                  <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mt-1">Artículos (Scopus)</p>
                 </div>
-                <div className="border border-[#e2e8f0] rounded p-4 text-center">
-                  <p className="font-heading font-bold text-[32px] text-[#0f172a]">{tesisEnCurso}</p>
-                  <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold mt-1">Tesis en Curso</p>
+                <div className="border border-outline-variant rounded p-4 text-center bg-surface-container-low">
+                  <p className="font-heading font-bold text-[32px] text-on-surface">{tesisEnCurso}</p>
+                  <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mt-1">Tesis en Curso</p>
                 </div>
               </div>
             </div>
 
             {/* Proyectos Destacados Vinculados */}
             {grupo.proyectosVinculados.length > 0 && (
-              <div className="bg-white border border-[#e2e8f0] rounded p-6">
-                <p className="font-sans font-bold text-[13px] text-[#0f172a] mb-3">
+              <div className="bg-surface-container-lowest border border-outline-variant rounded p-6 shadow-level-1">
+                <p className="font-sans font-bold text-[13px] text-on-surface mb-3">
                   Proyectos Destacados Vinculados
                 </p>
                 <div className="flex flex-col gap-2">
                   {grupo.proyectosVinculados.map((p) => {
                     const cfg = ESTADO_PROY[p.estado] || ESTADO_PROY.pending;
                     return (
-                      <div key={p.codigo} className="flex items-center justify-between border border-[#e2e8f0] rounded px-4 py-3">
+                      <div key={p.codigo} className="flex items-center justify-between border border-outline-variant bg-surface-container-low rounded px-4 py-3">
                         <div>
-                          <p className="font-sans font-semibold text-[13px] text-[#0f172a]">
+                          <p className="font-sans font-semibold text-[13px] text-on-surface">
                             {p.codigo}: {p.titulo}
                           </p>
-                          <p className="font-sans text-[11px] text-[#94a3b8] mt-0.5">{p.convocatoria}</p>
+                          <p className="font-sans text-[11px] text-on-surface-variant mt-0.5">{p.convocatoria}</p>
                         </div>
                         <span className={`ml-4 flex-shrink-0 inline-flex px-2 py-0.5 rounded font-sans font-semibold text-[11px] ${cfg.bg} ${cfg.text}`}>
                           {cfg.label}
@@ -264,8 +264,8 @@ export default function FichaGrupoPage() {
 
           {/* Columna derecha (1/3) — Nómina */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-[#e2e8f0] rounded p-5 sticky top-6">
-              <p className="font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-widest border-b border-[#e2e8f0] pb-2 mb-4">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded p-5 sticky top-6 shadow-level-1">
+              <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest border-b border-outline-variant pb-2 mb-4">
                 Nómina de Integrantes (Validada)
               </p>
 
@@ -276,19 +276,19 @@ export default function FichaGrupoPage() {
                   return (
                     <div
                       key={m.dni}
-                      className={`flex items-center gap-3 p-3 rounded border ${isDir ? 'border-[#dbeafe] bg-[#eff6ff]' : 'border-[#e2e8f0]'}`}
+                      className={`flex items-center gap-3 p-3 rounded border ${isDir ? 'border-[#dbeafe] bg-[#eff6ff]' : 'border-outline-variant'}`}
                     >
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-sans font-bold text-[13px] flex-shrink-0 ${isDir ? 'bg-[#001631] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-sans font-bold text-[13px] flex-shrink-0 ${isDir ? 'bg-[#001631] text-white' : 'bg-surface-container text-on-surface-variant'}`}>
                         {initials}
                       </div>
                       <div className="min-w-0">
-                        <p className={`font-sans font-bold text-[13px] truncate ${isDir ? 'text-[#001631]' : 'text-[#0f172a]'}`}>
+                        <p className={`font-sans font-bold text-[13px] truncate ${isDir ? 'text-[#001631]' : 'text-on-surface'}`}>
                           {m.nombre}
                         </p>
-                        <p className="font-sans text-[10px] text-[#94a3b8] uppercase tracking-wider font-semibold">
+                        <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">
                           {m.rol}
                         </p>
-                        <p className="font-sans text-[10px] text-[#94a3b8] mt-0.5">
+                        <p className="font-sans text-[10px] text-on-surface-variant mt-0.5">
                           DNI: {m.dni} · Alta: {m.fechaIncorporacion}
                         </p>
                       </div>
