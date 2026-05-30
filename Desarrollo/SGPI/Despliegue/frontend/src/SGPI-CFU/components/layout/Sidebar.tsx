@@ -193,10 +193,11 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefixes: ['/investigators', '/SGPI-CFMH'],
   },
   {
-    id:    'groups',
-    label: 'Grupos de Inv.',
-    href:  '/groups',
-    icon:  UsersIcon,
+    id:            'groups',
+    label:         'Grupos de Inv.',
+    href:          '/SGPI-CFGI',
+    icon:          UsersIcon,
+    matchPrefixes: ['/groups', '/SGPI-CFGI'],
   },
   {
     id:    'sync',
