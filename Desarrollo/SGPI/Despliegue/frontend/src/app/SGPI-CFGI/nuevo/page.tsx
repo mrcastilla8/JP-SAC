@@ -215,18 +215,18 @@ export default function NuevoGrupoPage() {
             {/* Back link */}
             <button
               onClick={() => router.push('/SGPI-CFGI')}
-              className="inline-flex items-center gap-1 text-[13px] font-sans text-[#475569] hover:text-[#0f172a] transition-colors cursor-pointer mb-2"
+              className="inline-flex items-center gap-1 text-[13px] font-sans text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer mb-2"
               aria-label="Volver a la bandeja principal"
             >
               <BackIcon />
             </button>
 
             {/* Título + badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-sans font-bold text-[16px] text-[#0f172a]">
-                Crear Nuevo Grupo de Investigación
-              </h1>
-              <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 font-sans font-bold text-[10px] px-2 py-0.5 rounded border border-slate-200">
+            <h1 className="font-heading font-semibold text-h1 text-on-surface leading-[38px]">
+              Crear Nuevo Grupo de Investigación
+            </h1>
+            <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 font-sans font-bold text-[10px] px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">
                 • Ingreso Manual
               </span>
             </div>
@@ -264,13 +264,13 @@ export default function NuevoGrupoPage() {
         )}
 
         {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-        <div className="border-b border-[#e2e8f0] flex">
+        <div className="border-b border-outline-variant flex bg-surface-container-lowest rounded-t border border-b-0">
           <button
             onClick={() => setActiveTab('datos-maestros')}
-            className={`flex items-center gap-1.5 px-4 py-3 font-sans text-[13px] border-b-2 transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-colors duration-100 cursor-pointer ${
               activeTab === 'datos-maestros'
-                ? 'border-[#001631] text-[#001631] font-bold'
-                : 'border-transparent text-[#64748b] hover:text-[#0f172a]'
+                ? 'border-[#001631] text-[#001631]'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
             }`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -280,10 +280,10 @@ export default function NuevoGrupoPage() {
           </button>
           <button
             onClick={() => setActiveTab('miembros')}
-            className={`flex items-center gap-1.5 px-4 py-3 font-sans text-[13px] border-b-2 transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-colors duration-100 cursor-pointer ${
               activeTab === 'miembros'
-                ? 'border-[#001631] text-[#001631] font-bold'
-                : 'border-transparent text-[#64748b] hover:text-[#0f172a]'
+                ? 'border-[#001631] text-[#001631]'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
             }`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -295,7 +295,7 @@ export default function NuevoGrupoPage() {
         </div>
 
         {/* ── Contenido del Tab ─────────────────────────────────────────────── */}
-        <div className="bg-white border border-t-0 border-[#e2e8f0] rounded-b p-6">
+        <div className="bg-surface-container-lowest border border-t-0 border-outline-variant rounded-b p-6 shadow-level-1">
 
           {/* TAB 1 — DATOS MAESTROS */}
           {activeTab === 'datos-maestros' && (
@@ -304,7 +304,7 @@ export default function NuevoGrupoPage() {
               {/* Código + Fuente */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="code" className="block font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider mb-1">
+                  <label htmlFor="code" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Código Único (ID) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -313,11 +313,11 @@ export default function NuevoGrupoPage() {
                     placeholder="Ej. GI-006"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    className="w-full px-3 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                    className="w-full px-3 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                   />
                 </div>
                 <div>
-                  <label htmlFor="fuente" className="block font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider mb-1">
+                  <label htmlFor="fuente" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Fuente de Origen
                   </label>
                   <div className="relative">
@@ -325,13 +325,13 @@ export default function NuevoGrupoPage() {
                       id="fuente"
                       value={fuente}
                       onChange={(e) => setFuente(e.target.value as FuenteOrigen)}
-                      className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                      className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                     >
                       <option value="Manual">Manual</option>
                       <option value="RAIS">RAIS</option>
                       <option value="Res. Rectoral">Res. Rectoral</option>
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
                     </span>
                   </div>
@@ -340,12 +340,12 @@ export default function NuevoGrupoPage() {
 
               {/* Nombre Oficial */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="nombre" className="font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="nombre" className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest">
                     Nombre Oficial del Grupo <span className="text-red-500">*</span>
                   </label>
                   {isNameAnomalous() && (
-                    <span className="font-sans font-bold text-[10px] text-[#d97706] uppercase tracking-wider">
+                    <span className="font-sans font-bold text-[10px] text-[#d97706] uppercase tracking-widest">
                       HOY SIN FORMATO
                     </span>
                   )}
@@ -356,7 +356,7 @@ export default function NuevoGrupoPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa] resize-none"
+                  className="w-full px-3 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa] resize-none"
                 />
                 {isNameAnomalous() && (
                   <p className="mt-1 font-sans text-[12px] text-[#64748b]">
@@ -368,7 +368,7 @@ export default function NuevoGrupoPage() {
               {/* Acrónimo + Fecha Registro */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="acronym" className="block font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider mb-1">
+                  <label htmlFor="acronym" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Acrónimo / Siglas
                   </label>
                   <input
@@ -377,11 +377,11 @@ export default function NuevoGrupoPage() {
                     placeholder="Ej: GIAP"
                     value={acronym}
                     onChange={(e) => setAcronym(e.target.value)}
-                    className="w-full px-3 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                    className="w-full px-3 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                   />
                 </div>
                 <div>
-                  <label htmlFor="fechaRecon" className="block font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider mb-1">
+                  <label htmlFor="fechaRecon" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Fecha de Reconocimiento
                   </label>
                   <input
@@ -389,7 +389,7 @@ export default function NuevoGrupoPage() {
                     type="date"
                     value={recognitionDate}
                     onChange={(e) => setRecognitionDate(e.target.value)}
-                    className="w-full px-3 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                    className="w-full px-3 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                   />
                 </div>
               </div>
@@ -397,7 +397,7 @@ export default function NuevoGrupoPage() {
               {/* Línea de Investigación + Estado */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="linea" className="block font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider mb-1">
+                  <label htmlFor="linea" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Línea de Investigación Principal
                   </label>
                   <div className="relative">
@@ -405,18 +405,18 @@ export default function NuevoGrupoPage() {
                       id="linea"
                       value={selectedLine}
                       onChange={(e) => setSelectedLine(e.target.value)}
-                      className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                      className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                     >
                       {LINEAS_INVESTIGACION.map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="estado" className="block font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider mb-1">
+                  <label htmlFor="estado" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Estado Inicial del Grupo
                   </label>
                   <div className="relative">
@@ -424,7 +424,7 @@ export default function NuevoGrupoPage() {
                       id="estado"
                       value={status}
                       onChange={(e) => setStatus(e.target.value as EstadoGrupo)}
-                      className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                      className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                     >
                       <option value="pendiente_validacion">Pendiente Validar</option>
                       <option value="validado_activo">Validado / Activo</option>
@@ -446,7 +446,7 @@ export default function NuevoGrupoPage() {
 
               {/* Buscador en padrón */}
               <div>
-                <p className="font-sans font-bold text-[11px] text-[#64748b] uppercase tracking-wider mb-2">
+                <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                   Buscar en Padrón de Investigadores (CUO4)
                 </p>
                 <div className="flex gap-2 items-center">
@@ -456,7 +456,7 @@ export default function NuevoGrupoPage() {
                       placeholder="DNI o Nombre de investigador..."
                       value={busquedaInv}
                       onChange={(e) => setBusquedaInv(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 font-sans text-[13px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
+                      className="w-full pl-8 pr-3 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                     />
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                       <SearchIcon />
@@ -494,51 +494,51 @@ export default function NuevoGrupoPage() {
                   </button>
 
                   {/* Regla de negocio inline a la derecha del botón */}
-                  <div className="flex items-center gap-1.5 text-[12px] font-sans text-[#475569] ml-2">
-                    <span className="text-[#64748b]"><InfoIcon /></span>
-                    <span>Debe existir un <strong className="text-[#0f172a]">Director</strong> activo.</span>
+                  <div className="flex items-center gap-1.5 text-[13px] font-sans text-on-surface-variant ml-2">
+                    <span className="text-on-surface-variant"><InfoIcon /></span>
+                    <span>Debe existir un <strong className="text-on-surface">Director</strong> activo.</span>
                   </div>
                 </div>
               </div>
 
               {/* Tabla de Miembros */}
-              <div className="border border-[#e2e8f0] rounded overflow-hidden">
+              <div className="border border-outline-variant rounded overflow-hidden shadow-sm">
                 <table className="w-full border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-[#e2e8f0] bg-[#f8fafc]">
-                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider">
+                    <tr className="border-b border-outline-variant bg-surface-container-low">
+                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest">
                         Investigador
                       </th>
-                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider w-[120px]">
+                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest w-[120px]">
                         ID / DNI
                       </th>
-                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider w-[180px]">
+                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest w-[180px]">
                         Rol en el Grupo
                       </th>
-                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider w-[130px]">
+                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest w-[130px]">
                         Fecha Incorp.
                       </th>
-                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-wider w-[70px] text-right">
+                      <th className="px-4 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest w-[70px] text-right">
                         Acción
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#e2e8f0]">
+                  <tbody className="divide-y divide-outline-variant">
                     {miembros.length > 0 ? (
                       miembros.map((m) => {
                         const isDir = m.rol === 'Director';
                         const initials = m.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
                         return (
-                          <tr key={m.dni} className="hover:bg-slate-50/50">
+                          <tr key={m.dni} className="hover:bg-surface-container-low/50">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-sans font-bold text-[11px] flex-shrink-0 ${isDir ? 'bg-[#001631] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-sans font-bold text-[11px] flex-shrink-0 ${isDir ? 'bg-[#001631] text-white' : 'bg-surface-container text-on-surface-variant'}`}>
                                   {initials}
                                 </div>
-                                <span className="font-sans font-semibold text-[13px] text-[#0f172a]">{m.nombre}</span>
+                                <span className="font-sans font-semibold text-[13px] text-on-surface">{m.nombre}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 font-sans text-[13px] text-[#475569]">
+                            <td className="px-4 py-3 font-sans text-[13px] text-on-surface-variant">
                               {m.dni}
                             </td>
                             <td className="px-4 py-3">
@@ -546,19 +546,19 @@ export default function NuevoGrupoPage() {
                                 <select
                                   value={m.rol}
                                   onChange={(e) => handleRoleChange(m.dni, e.target.value as RolMiembro)}
-                                  className="w-full appearance-none pl-2 pr-6 py-1 font-sans text-[12px] text-[#0f172a] bg-white border border-[#e2e8f0] rounded outline-none focus:ring-1 focus:ring-[#a8c8fa] cursor-pointer"
+                                  className="w-full appearance-none pl-2 pr-6 py-1 font-sans text-[12px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-1 focus:ring-[#a8c8fa] cursor-pointer"
                                 >
                                   <option value="Director">Director</option>
                                   <option value="Co-Investigador">Co-Investigador</option>
                                   <option value="Colaborador">Colaborador</option>
                                   <option value="Tesista">Tesista</option>
                                 </select>
-                                <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+                                <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-on-surface-variant">
                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 font-sans text-[13px] text-[#475569]">
+                            <td className="px-4 py-3 font-sans text-[13px] text-on-surface-variant">
                               {m.fechaIncorporacion}
                             </td>
                             <td className="px-4 py-3 text-right">

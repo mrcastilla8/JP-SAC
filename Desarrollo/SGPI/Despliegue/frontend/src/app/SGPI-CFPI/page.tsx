@@ -2,49 +2,48 @@
 
 /**
  * @file page.tsx
- * @route /SGPI-CFGI
- * @description Bandeja principal de Gestión de Grupos de Investigación (SGPI-CFGI).
+ * @route /SGPI-CFPI
+ * @description Bandeja principal de Gestión de Proyectos de Investigación (SGPI-CFPI).
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
-import type { FiltrosGrupos, EstadoGrupo, FuenteOrigen } from './_data/types';
-import { getGrupos, getStats, type PaginatedGrupos } from './_data/service';
-import type { StatsGrupos } from './_data/types';
+import type { FiltrosProyectos, EstadoProyecto } from './_data/types';
+import { getProyectos, getStats, type PaginatedProyectos } from './_data/service';
+import type { StatsProyectos } from './_data/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuración visual de badges
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ESTADO_CONFIG: Record<EstadoGrupo, { dot: string; text: string; bg: string; label: string }> = {
-  pendiente_validacion: {
+const ESTADO_CONFIG: Record<EstadoProyecto, { dot: string; text: string; bg: string; label: string }> = {
+  pendiente_validar: {
     dot: 'bg-[#d97706]',
     text: 'text-[#92400e]',
     bg: 'bg-[#fef3c7]',
-    label: 'Pendiente Validar',
+    label: 'PENDIENTE VALIDAR',
   },
-  validado_activo: {
+  en_ejecucion: {
     dot: 'bg-[#16a34a]',
     text: 'text-[#166534]',
     bg: 'bg-[#dcfce7]',
-    label: 'Validado / Activo',
+    label: 'EN EJECUCIÓN',
   },
-  validado_inactivo: {
-    dot: 'bg-[#dc2626]',
-    text: 'text-[#991b1b]',
-    bg: 'bg-[#fee2e2]',
-    label: 'Validado / Inactivo',
+  concluido: {
+    dot: 'bg-[#64748b]',
+    text: 'text-[#334155]',
+    bg: 'bg-[#f1f5f9]',
+    label: 'CONCLUIDO',
   },
 };
 
-const FUENTE_CONFIG: Record<FuenteOrigen, { text: string; bg: string }> = {
-  RAIS:            { text: 'text-[#1e40af]', bg: 'bg-[#dbeafe]' },
-  'Res. Rectoral': { text: 'text-[#6d28d9]', bg: 'bg-[#ede9fe]' },
-  Manual:          { text: 'text-[#374151]', bg: 'bg-[#f3f4f6]' },
+const DEFAULT_FILTROS: FiltrosProyectos = {
+  buscar: '',
+  estado: '',
+  convocatoria: '',
+  inicioPlanificado: '',
 };
-
-const DEFAULT_FILTROS: FiltrosGrupos = { buscar: '', estado: '', fuente: '' };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Íconos SVG
@@ -100,33 +99,40 @@ const ChevronDown = () => (
   </svg>
 );
 
+const DocumentIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+);
+
+const WarningIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Componentes de apoyo
 // ─────────────────────────────────────────────────────────────────────────────
 
-function EstadoBadge({ estado }: { estado: EstadoGrupo }) {
+function EstadoBadge({ estado }: { estado: EstadoProyecto }) {
   const cfg = ESTADO_CONFIG[estado];
   return (
     <span className={`
-      inline-flex items-center gap-1.5 px-2 py-0.5 rounded
-      font-sans font-semibold text-[11px] whitespace-nowrap
+      inline-flex items-center gap-1 px-2 py-0.5 rounded
+      font-sans font-semibold text-[10px] whitespace-nowrap
       ${cfg.bg} ${cfg.text}
     `}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} aria-hidden="true"/>
       {cfg.label}
-    </span>
-  );
-}
-
-function FuenteBadge({ fuente }: { fuente: FuenteOrigen }) {
-  const cfg = FUENTE_CONFIG[fuente];
-  return (
-    <span className={`
-      inline-flex items-center px-2 py-0.5 rounded
-      font-sans font-semibold text-[11px] whitespace-nowrap
-      ${cfg.bg} ${cfg.text}
-    `}>
-      {fuente}
     </span>
   );
 }
@@ -146,18 +152,6 @@ function Select({ id, value, onChange, options, label }: {
       <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant">
         <ChevronDown />
       </span>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return (
-    <div className="flex-1 min-w-[160px] bg-white border border-[#e2e8f0] rounded p-5">
-      <p className="font-sans font-bold text-[10px] text-[#64748b] uppercase tracking-widest mb-2">{label}</p>
-      <p className="font-heading font-bold text-[30px] leading-[34px] text-[#0f172a]">
-        {value.toLocaleString('es-PE')}
-      </p>
-      {sub && <p className="font-sans text-[11px] text-[#94a3b8] mt-1">{sub}</p>}
     </div>
   );
 }
@@ -210,30 +204,31 @@ function Pagination({ page, pages, onChange }: {
 // Componente Principal
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function GruposBandejaPage() {
+export default function ProyectosBandejaPage() {
   const router = useRouter();
 
-  const [filtros,    setFiltros]    = useState<FiltrosGrupos>(DEFAULT_FILTROS);
+  const [filtros,    setFiltros]    = useState<FiltrosProyectos>(DEFAULT_FILTROS);
   const [tempBuscar, setTempBuscar] = useState('');
   const [tempEstado, setTempEstado] = useState('');
-  const [tempFuente, setTempFuente] = useState('');
+  const [tempConvocatoria, setTempConvocatoria] = useState('');
+  const [tempInicio, setTempInicio] = useState('');
 
-  const [resultado, setResultado] = useState<PaginatedGrupos | null>(null);
-  const [stats,     setStats]     = useState<StatsGrupos | null>(null);
+  const [resultado, setResultado] = useState<PaginatedProyectos | null>(null);
+  const [stats,     setStats]     = useState<StatsProyectos | null>(null);
   const [cargando,  setCargando]  = useState(true);
   const [pagina,    setPagina]    = useState(1);
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
     try {
-      const [dataGrupos, dataStats] = await Promise.all([
-        getGrupos(filtros, pagina),
+      const [dataProyectos, dataStats] = await Promise.all([
+        getProyectos(filtros, pagina),
         getStats(),
       ]);
-      setResultado(dataGrupos);
+      setResultado(dataProyectos);
       setStats(dataStats);
     } catch (error) {
-      console.error('Error al cargar datos de grupos:', error);
+      console.error('Error al cargar proyectos de investigación:', error);
     } finally {
       setCargando(false);
     }
@@ -244,48 +239,45 @@ export default function GruposBandejaPage() {
   const handleFiltrar = (e: React.FormEvent) => {
     e.preventDefault();
     setPagina(1);
-    setFiltros({ buscar: tempBuscar, estado: tempEstado, fuente: tempFuente });
+    setFiltros({
+      buscar: tempBuscar,
+      estado: tempEstado,
+      convocatoria: tempConvocatoria,
+      inicioPlanificado: tempInicio,
+    });
   };
 
   const handleLimpiar = () => {
-    setTempBuscar(''); setTempEstado(''); setTempFuente('');
+    setTempBuscar(''); setTempEstado(''); setTempConvocatoria(''); setTempInicio('');
     setPagina(1);
     setFiltros(DEFAULT_FILTROS);
   };
 
-  const formatearFecha = (fechaStr: string) => {
-    if (!fechaStr) return '-';
-    try {
-      const d = new Date(fechaStr);
-      return d.toLocaleDateString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    } catch { return fechaStr; }
-  };
-
-  const hayFiltrosActivos = filtros.buscar || filtros.estado || filtros.fuente;
+  const hayFiltrosActivos = filtros.buscar || filtros.estado || filtros.convocatoria || filtros.inicioPlanificado;
 
   return (
     <MainLayout
-      title="Gestión de Grupos de Investigación"
-      subtitle="Controle e identifique la información importada de fuentes externas que requiere atención."
+      title="Gestión de Proyectos de Investigación"
+      subtitle="Certifique, audite y monitorea los hitos de los proyectos importados del RAIS y VRIP."
     >
       <div className="flex flex-col gap-5">
 
-        {/* Header: título + botón Nuevo Grupo */}
+        {/* Header: título + botón Nuevo Proyecto */}
         <div className="flex items-start justify-between">
           <div>
             <h1 className="font-heading font-semibold text-h1 text-on-surface leading-[38px]">
-              Gestión de Grupos de Investigación
+              Gestión de Proyectos de Investigación
             </h1>
             <p className="mt-1 font-sans text-body-md text-on-surface-variant">
-              Controle e identifique la información importada de fuentes externas que requiere atención.
+              Certifique, audite y monitorea los hitos de los proyectos importados del RAIS y VRIP.
             </p>
           </div>
           <button
-            onClick={() => router.push('/SGPI-CFGI/nuevo')}
+            onClick={() => router.push('/SGPI-CFPI/nuevo')}
             className="flex items-center gap-1.5 bg-[#001631] hover:bg-[#002b54] text-white font-sans font-bold text-[13px] px-4 py-2 rounded shadow transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
           >
             <PlusIcon />
-            Nuevo Grupo
+            Nuevo Proyecto
           </button>
         </div>
 
@@ -294,14 +286,14 @@ export default function GruposBandejaPage() {
 
           {/* Búsqueda */}
           <div className="flex-1 min-w-[200px]">
-            <label htmlFor="buscar" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
-              Buscar
+            <label htmlFor="buscar" className="block font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-1.5">
+              BUSCAR
             </label>
             <div className="relative">
               <input
                 id="buscar"
                 type="text"
-                placeholder="Nombre o código..."
+                placeholder="Cód RAIS, Título o Resp..."
                 value={tempBuscar}
                 onChange={(e) => setTempBuscar(e.target.value)}
                 className="w-full pl-8 pr-3 py-[7px] font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa] transition-all"
@@ -314,8 +306,8 @@ export default function GruposBandejaPage() {
 
           {/* Estado */}
           <div className="w-[190px]">
-            <label htmlFor="filtro-estado" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
-              Estado
+            <label htmlFor="filtro-estado" className="block font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-1.5">
+              ESTADO
             </label>
             <Select
               id="filtro-estado"
@@ -323,30 +315,45 @@ export default function GruposBandejaPage() {
               onChange={setTempEstado}
               label="Filtrar por Estado"
               options={[
-                { value: '',                      label: 'Pendientes de validac...' },
-                { value: 'pendiente_validacion',  label: 'Pendiente Validar' },
-                { value: 'validado_activo',        label: 'Validado / Activo' },
-                { value: 'validado_inactivo',      label: 'Validado / Inactivo' },
+                { value: '',                      label: 'Pendientes de Validación' },
+                { value: 'pendiente_validar',     label: 'Pendiente Validar' },
+                { value: 'en_ejecucion',          label: 'En Ejecución' },
+                { value: 'concluido',             label: 'Concluido' },
               ]}
             />
           </div>
 
-          {/* Fuente */}
-          <div className="w-[140px]">
-            <label htmlFor="filtro-fuente" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
-              Fuente de Origen
+          {/* Convocatoria */}
+          <div className="w-[170px]">
+            <label htmlFor="filtro-convocatoria" className="block font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-1.5">
+              CONVOCATORIA
             </label>
             <Select
-              id="filtro-fuente"
-              value={tempFuente}
-              onChange={setTempFuente}
-              label="Filtrar por Fuente"
+              id="filtro-convocatoria"
+              value={tempConvocatoria}
+              onChange={setTempConvocatoria}
+              label="Filtrar por Convocatoria"
               options={[
-                { value: '',             label: 'Todas' },
-                { value: 'RAIS',         label: 'RAIS' },
-                { value: 'Res. Rectoral', label: 'Res. Rectoral' },
-                { value: 'Manual',       label: 'Manual' },
+                { value: '',                      label: 'Todas' },
+                { value: 'Convocatoria VRIP 2026', label: 'Convocatoria VRIP 2026' },
+                { value: 'Convocatoria VRIP 2025', label: 'Convocatoria VRIP 2025' },
+                { value: 'Convocatoria VRIP 2024', label: 'Convocatoria VRIP 2024' },
+                { value: 'VRIP General',          label: 'VRIP General' },
               ]}
+            />
+          </div>
+
+          {/* Inicio Planificado */}
+          <div className="w-[150px]">
+            <label htmlFor="filtro-inicio" className="block font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-1.5">
+              INICIO PLANIFICADO
+            </label>
+            <input
+              id="filtro-inicio"
+              type="date"
+              value={tempInicio}
+              onChange={(e) => setTempInicio(e.target.value)}
+              className="w-full px-3 py-[6px] font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-[#e2e8f0] rounded outline-none focus:ring-2 focus:ring-[#a8c8fa] transition-all"
             />
           </div>
 
@@ -363,7 +370,7 @@ export default function GruposBandejaPage() {
               <button
                 type="button"
                 onClick={handleLimpiar}
-              className="border border-outline-variant hover:bg-slate-50 font-sans text-[13px] text-on-surface-variant px-4 py-[7px] rounded transition-colors cursor-pointer"
+                className="border border-[#e2e8f0] hover:bg-slate-50 font-sans text-[13px] text-on-surface-variant px-4 py-[7px] rounded transition-colors cursor-pointer"
               >
                 Limpiar
               </button>
@@ -371,91 +378,111 @@ export default function GruposBandejaPage() {
           </div>
         </form>
 
-        {/* Tabla de Grupos */}
+        {/* Tabla de Proyectos */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded shadow-level-1 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-outline-variant bg-surface-container-low">
-                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest whitespace-nowrap w-[140px]">
-                    Código
+                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest whitespace-nowrap w-[130px]">
+                    CÓD. RAIS
                   </th>
-                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest whitespace-nowrap">
-                    Nombre del Grupo
+                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest whitespace-nowrap">
+                    TÍTULO DEL PROYECTO
                   </th>
-                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest whitespace-nowrap w-[170px]">
-                    Importación/Creación
+                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest whitespace-nowrap w-[180px]">
+                    RESP. PRINCIPAL
                   </th>
-                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest whitespace-nowrap w-[110px]">
-                    Fuente
+                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest whitespace-nowrap w-[180px]">
+                    GRUPO INV.
                   </th>
-                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest whitespace-nowrap w-[170px]">
-                    Estado
+                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest whitespace-nowrap w-[190px]">
+                    ESTADO / ALERTAS
                   </th>
-                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest whitespace-nowrap w-[100px] text-right">
-                    Acciones
+                  <th scope="col" className="px-5 py-3 font-sans font-bold text-[10px] text-on-surface-variant uppercase tracking-widest whitespace-nowrap w-[110px] text-right">
+                    ACCIONES
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
                 {cargando ? (
-                  Array.from({ length: 4 }).map((_, i) => (
+                  Array.from({ length: 3 }).map((_, i) => (
                     <tr key={`skel-${i}`} className="animate-pulse">
-                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-20" /></td>
-                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-3/4" /></td>
-                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-20" /></td>
-                      <td className="px-5 py-4"><div className="h-5 bg-slate-100 rounded w-12" /></td>
-                      <td className="px-5 py-4"><div className="h-5 bg-slate-100 rounded-full w-28" /></td>
+                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-16" /></td>
+                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-5/6" /></td>
+                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-28" /></td>
+                      <td className="px-5 py-4"><div className="h-4 bg-slate-100 rounded w-32" /></td>
+                      <td className="px-5 py-4"><div className="h-8 bg-slate-100 rounded w-24" /></td>
                       <td className="px-5 py-4 text-right"><div className="h-7 bg-slate-100 rounded w-14 ml-auto" /></td>
                     </tr>
                   ))
                 ) : resultado && resultado.items.length > 0 ? (
-                  resultado.items.map((grupo) => (
-                    <tr key={grupo.code} className="hover:bg-surface-container-low transition-colors">
-                      <td className="px-5 py-3.5 font-sans font-semibold text-[13px] text-on-surface">
-                        {grupo.code}
-                      </td>
-                      <td className="px-5 py-3.5 font-sans text-[13px] text-on-surface font-medium max-w-[420px]">
-                        {grupo.name}
-                      </td>
-                      <td className="px-5 py-3.5 font-sans text-[13px] text-on-surface-variant">
-                        {formatearFecha(grupo.createdAt)}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <FuenteBadge fuente={grupo.fuente} />
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <EstadoBadge estado={grupo.status} />
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {grupo.status === 'pendiente_validacion' ? (
-                          <button
-                            onClick={() => router.push(`/SGPI-CFGI/${grupo.code}/validar`)}
-                            className="inline-flex items-center gap-1.5 border border-[#001631] text-[#001631] hover:bg-[#001631] hover:text-white font-sans font-bold text-[12px] px-3 py-1 rounded transition-colors cursor-pointer"
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                            </svg>
-                            Validar
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => router.push(`/SGPI-CFGI/${grupo.code}/ficha`)}
-                            className="inline-flex items-center justify-center text-[#475569] hover:text-[#0f172a] p-1.5 rounded hover:bg-slate-100 transition-colors cursor-pointer"
-                            title="Ver Ficha Consolidada"
-                            aria-label="Ver Ficha"
-                          >
-                            <EyeIcon />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  resultado.items.map((proy) => {
+                    const isPendiente = proy.status === 'pendiente_validar';
+
+                    // Config de Alertas específicas
+                    let alertaElement = null;
+                    if (proy.code === 'PRJ-26-045') {
+                      alertaElement = (
+                        <span className="inline-flex mt-1 text-[10px] font-sans font-medium px-1.5 py-0.5 rounded bg-[#f3e8ff] text-[#6b21a8] uppercase tracking-wider">
+                          Extracción OCR (RR)
+                        </span>
+                      );
+                    } else if (proy.code === 'PRJ-25-182') {
+                      alertaElement = (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-sans font-semibold px-1.5 py-0.5 rounded bg-[#fee2e2] text-[#b91c1c] uppercase tracking-wider">
+                          <WarningIcon />
+                          Hito 12m Vencido
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <tr key={proy.code} className="hover:bg-surface-container-low/40 transition-colors">
+                        <td className="px-5 py-3.5 font-sans text-[13px] text-on-surface-variant">
+                          {proy.code}
+                        </td>
+                        <td className="px-5 py-3.5 font-sans text-[13px] text-on-surface font-semibold max-w-[320px]">
+                          {proy.title}
+                        </td>
+                        <td className="px-5 py-3.5 font-sans text-[13px] text-on-surface-variant font-medium">
+                          {proy.responsablePrincipal}
+                        </td>
+                        <td className="px-5 py-3.5 font-sans text-[13px] text-[#475569]">
+                          {proy.grupoVinculado}
+                        </td>
+                        <td className="px-5 py-3.5 flex flex-col items-start justify-center">
+                          <EstadoBadge estado={proy.status} />
+                          {alertaElement}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          {isPendiente ? (
+                            <button
+                              onClick={() => router.push(`/SGPI-CFPI/${proy.code}/validar`)}
+                              className="inline-flex items-center gap-1 border border-[#001631] text-[#001631] hover:bg-[#001631] hover:text-white font-sans font-bold text-[12px] px-3 py-1 rounded transition-colors cursor-pointer"
+                            >
+                              <DocumentIcon />
+                              Gestionar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => router.push(`/SGPI-CFPI/${proy.code}`)}
+                              className="inline-flex items-center justify-center text-[#475569] hover:text-[#001631] p-1.5 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                              title="Ver Expediente Digital"
+                              aria-label="Ver Expediente"
+                            >
+                              <EyeIcon />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={6} className="px-5 py-12 text-center">
                       <p className="font-sans text-[13px] text-[#64748b]">
-                        No se encontraron grupos de investigación con los filtros seleccionados.
+                        No se encontraron proyectos con los filtros seleccionados.
                       </p>
                     </td>
                   </tr>
@@ -467,22 +494,12 @@ export default function GruposBandejaPage() {
           {resultado && resultado.pages > 1 && (
             <div className="flex items-center justify-between border-t border-[#e2e8f0] px-5 py-3.5">
               <span className="font-sans text-[12px] text-[#64748b]">
-                Página {resultado.page} de {resultado.pages} · {resultado.total} grupos
+                Página {resultado.page} de {resultado.pages} · {resultado.total} proyectos
               </span>
               <Pagination page={pagina} pages={resultado.pages} onChange={setPagina} />
             </div>
           )}
         </div>
-
-        {/* Bloque de KPIs — al final de la página como indica el diseño */}
-        {stats && (
-          <div className="flex flex-wrap gap-4 mt-2">
-            <KpiCard label="Total de Grupos"        value={stats.totalGrupos}       sub="Registrados en el sistema" />
-            <KpiCard label="Pendientes de Validar"  value={stats.pendientesValidar} sub="Requieren curación de datos" />
-            <KpiCard label="Validados Activos"       value={stats.validadosActivos}  sub="Grupos vigentes VRIP" />
-            <KpiCard label="Validados Inactivos"     value={stats.validadosInactivos} sub="Grupos dados de baja" />
-          </div>
-        )}
 
       </div>
     </MainLayout>
