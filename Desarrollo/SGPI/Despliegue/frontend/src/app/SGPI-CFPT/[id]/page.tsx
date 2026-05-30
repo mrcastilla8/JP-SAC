@@ -744,7 +744,6 @@ export default function ProduccionDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('metadata');
   const [isSaving, setIsSaving] = useState(false);
-  const [isDiscarding, setIsDiscarding] = useState(false);
   const [doiError, setDoiError] = useState<string | null>(null);
   const [showBuscar, setShowBuscar] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -839,12 +838,6 @@ export default function ProduccionDetailPage() {
     }
   };
 
-  // ── Descartar ──────────────────────────────────────────────────────────────
-  const handleDescartar = () => {
-    if (!confirm('¿Está seguro de descartar este registro? Esta acción no se puede deshacer.')) return;
-    setIsDiscarding(true);
-    setTimeout(() => { router.push('/SGPI-CFPT'); }, 500);
-  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -895,10 +888,10 @@ export default function ProduccionDetailPage() {
     <MainLayout title="Sistema de Gestión de Proyectos de Investigación">
 
       {/* ── Cabecera de validación ───────────────────────────────────────────── */}
-      <div className="mb-5">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-start justify-between mb-5 pb-4">
+        <div className="flex items-start gap-2">
           <button onClick={() => router.push('/SGPI-CFPT')}
-            className="flex items-center gap-1 font-sans text-[13px] text-on-surface-variant hover:text-on-surface transition-colors"
+            className="flex items-center gap-1 font-sans text-[13px] text-on-surface-variant hover:text-on-surface transition-colors mt-2"
             aria-label="Volver a la bandeja">
             <ArrowLeftIcon />
           </button>
@@ -914,6 +907,34 @@ export default function ProduccionDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Derecha — Cancelar + Confirmar y Persistir */}
+        <div className="flex gap-2 flex-shrink-0 ml-4">
+          <button
+            type="button"
+            onClick={() => router.push('/SGPI-CFPT')}
+            className="border border-[#e2e8f0] hover:bg-slate-50 font-sans text-[13px] text-[#475569] px-4 py-2 rounded transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmar}
+            disabled={isSaving || !!doiError}
+            className="flex items-center gap-2 bg-[#001631] hover:bg-[#002b54] text-white font-sans font-bold text-[13px] px-4 py-2 rounded shadow transition-colors cursor-pointer disabled:opacity-60"
+          >
+            {isSaving ? (
+              <>
+                <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Guardando...
+              </>
+            ) : (
+              <><CheckIcon /> Confirmar y Persistir</>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ── Error de guardado ─────────────────────────────────────────────────── */}
@@ -921,14 +942,14 @@ export default function ProduccionDetailPage() {
         <div role="alert"
           className="mb-4 flex items-start gap-2 px-4 py-3 rounded bg-[#fee2e2] border border-[#fca5a5] font-sans text-[13px] text-[#991b1b]">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           {saveError}
         </div>
       )}
 
       {/* ── Pestañas ──────────────────────────────────────────────────────────── */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded shadow-level-1 overflow-hidden mb-[72px]">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded shadow-level-1 overflow-hidden mb-6">
 
         {/* Tab bar */}
         <div className="flex border-b border-outline-variant">
@@ -969,44 +990,6 @@ export default function ProduccionDetailPage() {
           )}
         </div>
 
-      </div>
-
-      {/* ── Barra fija inferior ───────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-6 py-4 bg-white border-t border-outline-variant shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-        {/* Descartar */}
-        <button onClick={handleDescartar} disabled={isDiscarding || isSaving}
-          className="flex items-center gap-1.5 font-sans font-semibold text-[13px] text-[#dc2626] hover:text-[#b91c1c] disabled:opacity-40 transition-colors"
-          aria-label="Descartar este registro">
-          <TrashIcon /> Descartar Registro
-        </button>
-        {/* Cancelar + Confirmar */}
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/SGPI-CFPT')}
-            className="px-5 py-2 rounded font-sans font-semibold text-[13px] text-on-surface border border-outline-variant hover:bg-surface-container transition-colors"
-            aria-label="Cancelar y volver">
-            Cancelar
-          </button>
-          <button onClick={handleConfirmar} disabled={isSaving || !!doiError}
-            className="
-              flex items-center gap-2 px-5 py-2 rounded
-              font-sans font-semibold text-[13px] text-white
-              bg-[#001631] hover:bg-[#002b54]
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors duration-100
-            "
-            aria-label="Confirmar y persistir el registro">
-            {isSaving ? (
-              <>
-                <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                Guardando...
-              </>
-            ) : (
-              <><CheckIcon /> Confirmar y Persistir</>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* ── Modal buscar investigador (EX1) ──────────────────────────────────── */}

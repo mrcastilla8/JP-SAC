@@ -28,12 +28,7 @@ import { DEPARTAMENTOS, NIVELES_RENACYT } from '../_data/mock';
 // Íconos
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BackIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-);
+
 const PersonIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -69,15 +64,7 @@ const InfoIcon = () => (
     <line x1="12" y1="8" x2="12.01" y2="8"/>
   </svg>
 );
-const SyncIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="17 1 21 5 17 9"/>
-    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-    <polyline points="7 23 3 19 7 15"/>
-    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-  </svg>
-);
+
 const WarningIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -370,11 +357,20 @@ export default function NuevoDocentePage() {
             Completa los campos requeridos para el nuevo docente/investigador
           </p>
         </div>
-        <button onClick={() => router.push('/SGPI-CFMH')}
-          className="flex items-center gap-1.5 px-4 py-2 rounded font-sans font-semibold text-[13px] text-on-surface border border-outline-variant hover:bg-surface-container transition-colors flex-shrink-0"
-          aria-label="Volver al directorio">
-          <BackIcon /> Volver al directorio
-        </button>
+        <div className="flex gap-2 flex-shrink-0">
+          <button onClick={() => router.push('/SGPI-CFMH')}
+            className="border border-[#e2e8f0] hover:bg-slate-50 font-sans text-[13px] text-[#475569] px-4 py-2 rounded transition-colors cursor-pointer"
+            type="button"
+            aria-label="Cancelar registro">
+            Cancelar
+          </button>
+          <button onClick={handleRegistrar}
+            className="flex items-center gap-2 bg-[#001631] hover:bg-[#002b54] text-white font-sans font-bold text-[13px] px-4 py-2 rounded shadow transition-colors cursor-pointer"
+            type="button"
+            aria-label="Registrar nuevo docente">
+            <GraduateIcon /> Registrar Docente
+          </button>
+        </div>
       </div>
 
       {/* Error global */}
@@ -391,7 +387,7 @@ export default function NuevoDocentePage() {
         </div>
       )}
 
-      <div className="mb-[72px]">
+      <div className="mb-6">
 
         {/* ── 1. Información Personal ─────────────────────────────────────────── */}
         <SectionCard title="Información Personal" icon={<PersonIcon />}>
@@ -587,24 +583,7 @@ export default function NuevoDocentePage() {
 
       </div>
 
-      {/* ── Barra fija inferior ──────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-6 py-4 bg-white border-t border-outline-variant shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-        <span className="flex items-center gap-2 font-sans text-[12px] text-on-surface-variant">
-          <SyncIcon /> Los cambios no guardados se perderán al salir
-        </span>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/SGPI-CFMH')}
-            className="px-5 py-2 rounded font-sans font-semibold text-[13px] text-on-surface border border-outline-variant hover:bg-surface-container transition-colors"
-            aria-label="Cancelar registro">
-            Cancelar
-          </button>
-          <button onClick={handleRegistrar}
-            className="flex items-center gap-2 px-6 py-2 rounded font-sans font-semibold text-[13px] text-white bg-[#001631] hover:bg-[#002b54] transition-colors"
-            aria-label="Registrar nuevo docente">
-            <GraduateIcon /> Registrar Docente
-          </button>
-        </div>
-      </div>
+
 
       {/* ── Modal de confirmación ────────────────────────────────────────────── */}
       {showModal && (
