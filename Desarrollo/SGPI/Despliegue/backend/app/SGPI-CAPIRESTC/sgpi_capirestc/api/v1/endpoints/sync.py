@@ -210,7 +210,7 @@ def _run_vrip(filters: SyncFilters) -> Dict[str, Any]:
     if not _vrip_ok:
         return {"error": "Conector VRIP no instalado", "convocatorias": 0, "proyectos": []}
 
-    stats = {"convocatorias": 0, "proyectos": [], "errores": 0}
+    stats = {"convocatorias": 0, "convocatorias_lista": [], "proyectos": [], "errores": 0}
     year = filters.vrip_year
     program = filters.vrip_program
     query = filters.vrip_query
@@ -219,6 +219,7 @@ def _run_vrip(filters: SyncFilters) -> Dict[str, Any]:
         convocatorias_ext = VripConvocatoriasExtractor()
         convocatorias = convocatorias_ext.extract(year=year, program=program, query=query)
         stats["convocatorias"] = len(convocatorias)
+        stats["convocatorias_lista"] = convocatorias
         logger.info(f"[Sync/VRIP] {len(convocatorias)} convocatorias extraídas.")
     except Exception as e:
         logger.error(f"[Sync/VRIP] Error en convocatorias: {e}")
@@ -365,7 +366,7 @@ async def _run_sync_job(job_id: str, request: SyncRequest):
         return
 
     job.status = "running"
-    report = {s: {"procesados": 0, "resueltos": 0, "cuarentena": 0, "errores": 0} for s in request.sources}
+    report = {s: {"procesados": 0, "resueltos": 0, "cuarentena": 0, "errores": 0, "registros": []} for s in request.sources}
 
     if not _cmr_ok:
         job.status = "failed"
@@ -390,8 +391,73 @@ async def _run_sync_job(job_id: str, request: SyncRequest):
             try:
                 vrip_data = await asyncio.to_thread(_run_vrip, request.filters)
 
-                from app.models.domain import Proyecto
+                from app.models.domain import Proyecto, Convocatoria
                 from sqlalchemy.future import select as sa_select
+                from datetime import date, timedelta
+
+                # Reconciliar convocatorias (Upsert sin CMR)
+                for conv in vrip_data.get("convocatorias_lista", []):
+                    report["VRIP"]["procesados"] += 1
+                    try:
+                        parsed_close_date = None
+                        if conv.plazo_cierre:
+                            try:
+                                parsed_close_date = date.fromisoformat(conv.plazo_cierre)
+                            except ValueError:
+                                pass
+                        if not parsed_close_date:
+                            parsed_close_date = date.today() + timedelta(days=30)
+                        
+                        estado_resuelto = "Abierta" if parsed_close_date >= date.today() else "Cerrada"
+                        
+                        res = await db.execute(sa_select(Convocatoria).where(
+                            (Convocatoria.titulo_convocatoria == conv.titulo) |
+                            (Convocatoria.url_bases_vrip == conv.enlace)
+                        ))
+                        existing_conv = res.scalars().first()
+                        
+                        if existing_conv:
+                            if existing_conv.fecha_cierre != parsed_close_date:
+                                historial = existing_conv.cambios_cronograma or []
+                                motivo = "Modificación de cronograma detectada en sincronización."
+                                historial.append({
+                                    "fecha_anterior": existing_conv.fecha_cierre.isoformat() if existing_conv.fecha_cierre else None,
+                                    "fecha_nueva": parsed_close_date.isoformat(),
+                                    "motivo": motivo,
+                                    "fecha_cambio": datetime.now(timezone.utc).isoformat()
+                                })
+                                existing_conv.cambios_cronograma = historial
+                                existing_conv.fecha_cierre = parsed_close_date
+                            existing_conv.url_bases_vrip = conv.enlace
+                            existing_conv.estado_convocatoria = estado_resuelto
+                            report["VRIP"]["resueltos"] += 1
+                            report["VRIP"]["registros"].append({
+                                "tipo": "Convocatoria",
+                                "id": str(existing_conv.id_convocatoria) if existing_conv.id_convocatoria else conv.titulo,
+                                "titulo": conv.titulo,
+                                "estado": "Actualizado"
+                            })
+                        else:
+                            new_conv = Convocatoria(
+                                titulo_convocatoria=conv.titulo,
+                                entidad_emisora="VRIP-UNMSM",
+                                fecha_inicio_inscripcion=date.today(),
+                                fecha_cierre=parsed_close_date,
+                                url_bases_vrip=conv.enlace,
+                                cambios_cronograma=[],
+                                estado_convocatoria=estado_resuelto
+                            )
+                            db.add(new_conv)
+                            report["VRIP"]["resueltos"] += 1
+                            report["VRIP"]["registros"].append({
+                                "tipo": "Convocatoria",
+                                "id": conv.titulo,
+                                "titulo": conv.titulo,
+                                "estado": "Nuevo"
+                            })
+                    except Exception as e:
+                        logger.warning(f"[Sync/VRIP] Error procesando convocatoria: {e}")
+                        report["VRIP"]["errores"] += 1
 
                 # Reconciliar proyectos
                 for proy in vrip_data.get("proyectos", []):
@@ -411,9 +477,21 @@ async def _run_sync_job(job_id: str, request: SyncRequest):
                         if quarantine:
                             await persister.persist_quarantine(db, "proyecto", cmr_input.codigo_proyecto, ["VRIP"], merged, reason)
                             report["VRIP"]["cuarentena"] += 1
+                            report["VRIP"]["registros"].append({
+                                "tipo": "Proyecto",
+                                "id": cmr_input.codigo_proyecto,
+                                "titulo": merged.get("titulo_proyecto", ""),
+                                "estado": "En Cuarentena"
+                            })
                         else:
                             await persister.persist_resolved(db, "proyecto", cmr_input.codigo_proyecto, merged, "VRIP")
                             report["VRIP"]["resueltos"] += 1
+                            report["VRIP"]["registros"].append({
+                                "tipo": "Proyecto",
+                                "id": cmr_input.codigo_proyecto,
+                                "titulo": merged.get("titulo_proyecto", ""),
+                                "estado": "Resuelto"
+                            })
                     except Exception as e:
                         logger.warning(f"[Sync/VRIP] Error reconciliando proyecto: {e}")
                         report["VRIP"]["errores"] += 1
@@ -447,11 +525,23 @@ async def _run_sync_job(job_id: str, request: SyncRequest):
                                     db, "tesis", str(tesis.url_repositorio), ["Cybertesis"], merged, reason
                                 )
                                 report["CYBERTESIS"]["cuarentena"] += 1
+                                report["CYBERTESIS"]["registros"].append({
+                                    "tipo": "AsesorTesis",
+                                    "id": str(tesis.url_repositorio),
+                                    "titulo": merged.get("titulo_tesis", ""),
+                                    "estado": "En Cuarentena"
+                                })
                             else:
                                 await persister.persist_resolved(
                                     db, "tesis", str(tesis.url_repositorio), merged, "Cybertesis"
                                 )
                                 report["CYBERTESIS"]["resueltos"] += 1
+                                report["CYBERTESIS"]["registros"].append({
+                                    "tipo": "AsesorTesis",
+                                    "id": str(tesis.url_repositorio),
+                                    "titulo": merged.get("titulo_tesis", ""),
+                                    "estado": "Resuelto"
+                                })
                         except Exception as e:
                             logger.warning(f"[Sync/Cybertesis] Error procesando asesor: {e}")
                             report["CYBERTESIS"]["errores"] += 1
@@ -485,9 +575,21 @@ async def _run_sync_job(job_id: str, request: SyncRequest):
                         if quarantine:
                             await persister.persist_quarantine(db, "investigador", cmr_input.dni, ["RENACYT"], merged, reason)
                             report["RENACYT"]["cuarentena"] += 1
+                            report["RENACYT"]["registros"].append({
+                                "tipo": "Investigador",
+                                "id": cmr_input.dni,
+                                "titulo": f"{merged.get('nombres', '')} {merged.get('apellidos', '')}".strip(),
+                                "estado": "En Cuarentena"
+                            })
                         else:
                             await persister.persist_resolved(db, "investigador", cmr_input.dni, merged, "RENACYT")
                             report["RENACYT"]["resueltos"] += 1
+                            report["RENACYT"]["registros"].append({
+                                "tipo": "Investigador",
+                                "id": cmr_input.dni,
+                                "titulo": f"{merged.get('nombres', '')} {merged.get('apellidos', '')}".strip(),
+                                "estado": "Resuelto"
+                            })
                     except Exception as e:
                         logger.warning(f"[Sync/RENACYT] Error reconciliando investigador {cmr_input.dni}: {e}")
                         report["RENACYT"]["errores"] += 1

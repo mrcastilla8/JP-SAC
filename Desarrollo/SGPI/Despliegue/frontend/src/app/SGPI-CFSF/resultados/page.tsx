@@ -27,6 +27,14 @@ interface LogEntry {
   text: string;
 }
 
+interface RegistroReconciliado {
+  fuente: string;
+  tipo: string;
+  id: string;
+  titulo: string;
+  estado: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildLogs(report: Record<string, SyncSourceReport>): LogEntry[] {
@@ -167,6 +175,7 @@ export default function ResultadosSincronizacionPage() {
   const [jobId, setJobId]           = useState<string | null>(null);
   const [totalResueltos, setTotalResueltos] = useState(0);
   const [totalCuarentena, setTotalCuarentena] = useState(0);
+  const [registros, setRegistros]   = useState<RegistroReconciliado[]>([]);
 
   useEffect(() => {
     // Leer el reporte guardado por la Pantalla 1 tras completar el job
@@ -184,6 +193,22 @@ export default function ResultadosSincronizacionPage() {
         const totCua = Object.values(report).reduce((s, r) => s + (r.cuarentena ?? 0), 0);
         setTotalResueltos(totRes);
         setTotalCuarentena(totCua);
+
+        const allRegistros: RegistroReconciliado[] = [];
+        for (const [src, rep] of Object.entries(report)) {
+          if (rep.registros && Array.isArray(rep.registros)) {
+            for (const reg of rep.registros) {
+              allRegistros.push({
+                fuente: src,
+                tipo: reg.tipo,
+                id: reg.id,
+                titulo: reg.titulo,
+                estado: reg.estado,
+              });
+            }
+          }
+        }
+        setRegistros(allRegistros);
       } catch {
         // JSON inválido — usar fallback
       }
@@ -312,6 +337,67 @@ export default function ResultadosSincronizacionPage() {
           </div>
         )}
       </div>
+
+      {/* ── Registros Reconciliados ──────────────────────────────────────────── */}
+      {registros.length > 0 && (
+        <div className="bg-white border border-[#e2e8f0] rounded shadow-sm mb-6 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[#e2e8f0]">
+            <span className="font-heading font-semibold text-[15px] text-on-surface">
+              Detalle de Registros Reconciliados
+            </span>
+          </div>
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <table className="w-full">
+              <thead className="sticky top-0 bg-[#f8fafc] z-10 shadow-[0_1px_0_0_#e2e8f0]">
+                <tr>
+                  {['Fuente', 'Tipo', 'Identificador', 'Título / Nombre', 'Estado'].map((col) => (
+                    <th
+                      key={col}
+                      className="px-5 py-3 text-left font-sans text-[11px] font-bold tracking-[0.06em] uppercase text-on-surface-variant bg-[#f8fafc]"
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f1f5f9]">
+                {registros.map((reg, i) => (
+                  <tr key={i} className="hover:bg-[#f8fafc] transition-colors">
+                    <td className="px-5 py-3.5 font-sans text-body-sm text-on-surface font-medium whitespace-nowrap">
+                      {reg.fuente}
+                    </td>
+                    <td className="px-5 py-3.5 font-sans text-body-sm text-on-surface-variant whitespace-nowrap">
+                      {reg.tipo}
+                    </td>
+                    <td className="px-5 py-3.5 font-sans text-[11px] text-slate-500 font-mono">
+                      {reg.id}
+                    </td>
+                    <td className="px-5 py-3.5 font-sans text-body-sm text-on-surface">
+                      <div className="line-clamp-2 max-w-[400px]" title={reg.titulo}>
+                        {reg.titulo}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                        reg.estado === 'En Cuarentena' ? 'bg-amber-50 text-amber-700' :
+                        reg.estado === 'Error' ? 'bg-red-50 text-red-700' :
+                        'bg-emerald-50 text-emerald-700'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          reg.estado === 'En Cuarentena' ? 'bg-amber-500' :
+                          reg.estado === 'Error' ? 'bg-red-500' :
+                          'bg-emerald-500'
+                        }`} />
+                        {reg.estado}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ── Acciones ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-3">

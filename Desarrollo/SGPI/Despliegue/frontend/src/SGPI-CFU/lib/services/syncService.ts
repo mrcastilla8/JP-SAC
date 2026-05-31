@@ -40,6 +40,7 @@ export interface SyncSourceReport {
   convocatorias_extraidas?: number;
   total?: number;
   error?: string;
+  registros?: { tipo: string; id: string; titulo: string; estado: string; }[];
 }
 
 export interface SyncJobStatusData {
