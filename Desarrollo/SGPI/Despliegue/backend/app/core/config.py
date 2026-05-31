@@ -3,7 +3,7 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SGPI - Sistema de Gestión de Producción Intelectual"
+    PROJECT_NAME: str = "SGPI - Sistema de Gestión de Proyectos de Investigación"
     VERSION: str = "1.0.0"
 
     # Entorno: "development" | "production"
@@ -65,9 +65,27 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = ""
     JWT_SECRET: str = ""
 
+    # -------------------------------------------------------------------------
+    # Logging Configuration
+    # -------------------------------------------------------------------------
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE_PATH: str = "logs/sgpi.log"
+    LOG_MAX_BYTES: int = 10485760  # 10MB
+    LOG_BACKUP_COUNT: int = 5
+
+    # -------------------------------------------------------------------------
+    # Redis Cache Configuration
+    # -------------------------------------------------------------------------
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # -------------------------------------------------------------------------
+    # Rate Limiting de conectores (segundos)
+    # -------------------------------------------------------------------------
+    RENACYT_RATE_LIMIT_SECONDS: float = 0.5
+
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8",
+        env_file_encoding="utf-8-sig",
         extra="ignore",
     )
 
