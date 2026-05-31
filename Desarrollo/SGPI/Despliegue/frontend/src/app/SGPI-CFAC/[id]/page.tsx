@@ -2,7 +2,7 @@
 
 /**
  * @file [id]/page.tsx
- * @route /convocatorias/[id]
+ * @route /SGPI-CFAC/[id]
  * @description Pantalla de detalle de una Convocatoria de Alerta.
  *
  * Flujo (pasos 7-14):
@@ -32,7 +32,6 @@ import {
   EVIDENCIA_MAX_SIZE_MB,
   EVIDENCIA_ALLOWED_EXTS,
 } from '../_data/service';
-import { supabase } from '@/SGPI-CFU/lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -397,7 +396,7 @@ export default function ConvocatoriaDetailPage() {
       <MainLayout title="Sistema de Gestión de Proyectos de Investigación">
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="font-heading font-semibold text-h2 text-on-surface mb-2">Convocatoria no encontrada</p>
-          <button onClick={() => router.push('/convocatorias')}
+          <button onClick={() => router.push('/SGPI-CFAC')}
             className="font-sans text-[13px] font-medium text-[#2563eb] hover:underline">
             ← Volver a la lista
           </button>
@@ -414,19 +413,11 @@ export default function ConvocatoriaDetailPage() {
   const nivel            = nivelAlerta(dias);
   const tieneEvidencias  = evidencias.length > 0;
 
-  let estadoBadge: { bg: string; text: string };
-
-  if (!conv.fechaCierre) {
-    estadoBadge = { bg: 'bg-[#16a34a]', text: 'VER BASES' };
-  } else if (conv.estado === 'Cerrada' || conv.estado === 'Suspendida' || dias < 0) {
-    estadoBadge = { bg: 'bg-[#94a3b8]', text: dias < 0 && conv.estado === 'Abierta' ? 'CERRADA' : conv.estado.toUpperCase() };
-  } else {
-    estadoBadge = nivel === 'rojo'
-      ? { bg: 'bg-[#dc2626]', text: dias === 0 ? 'VENCE HOY' : `VENCE EN ${dias} ${dias === 1 ? 'DÍA' : 'DÍAS'}` }
-      : nivel === 'amarillo'
-        ? { bg: 'bg-[#d97706]', text: `VENCE EN ${dias} ${dias === 1 ? 'DÍA' : 'DÍAS'}` }
-        : { bg: 'bg-[#16a34a]', text: conv.estado === 'Abierta' ? `VENCE EN ${dias} ${dias === 1 ? 'DÍA' : 'DÍAS'}` : conv.estado.toUpperCase() };
-  }
+  const estadoBadge = nivel === 'rojo'
+    ? { bg: 'bg-[#dc2626]', text: 'CIERRE INMINENTE' }
+    : nivel === 'amarillo'
+      ? { bg: 'bg-[#d97706]', text: `VENCE EN ${dias} DÍAS` }
+      : { bg: 'bg-[#16a34a]', text: conv.estado.toUpperCase() };
 
   const nombre = conv.programa ?? conv.nombre;
 
@@ -456,7 +447,7 @@ export default function ConvocatoriaDetailPage() {
       {/* ── Volver ───────────────────────────────────────────────────────────── */}
       <div className="mb-4">
         <button
-          onClick={() => router.push('/convocatorias')}
+          onClick={() => router.push('/SGPI-CFAC')}
           className="inline-flex items-center gap-1.5 font-sans text-[13px] font-medium text-on-surface-variant hover:text-on-surface transition-colors"
           aria-label="Volver a la lista de convocatorias"
         >
@@ -553,27 +544,6 @@ export default function ConvocatoriaDetailPage() {
         </div>
       )}
 
-      {/* ── Cronograma Detallado ─────────────────────────────────────────────── */}
-      {conv.cronogramaDetallado && conv.cronogramaDetallado.length > 0 && (
-        <div className="bg-surface-container-lowest border border-outline-variant rounded shadow-level-1 overflow-hidden mt-6">
-          <div className="px-5 pt-4 pb-2 border-b border-outline-variant">
-            <h2 className="font-sans font-bold text-[13px] text-on-surface">Cronograma Detallado</h2>
-          </div>
-          <div className="divide-y divide-outline-variant">
-            {conv.cronogramaDetallado.map((hito, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3 hover:bg-surface-container-low transition-colors gap-2">
-                <span className="font-sans text-[13px] text-on-surface-variant flex-1 leading-tight">
-                  {hito.actividad}
-                </span>
-                <span className="font-sans text-[13px] text-on-surface font-medium whitespace-nowrap text-right">
-                  {hito.fecha_detalle}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ── Archivos de Evidencia (paso 13 / estado final) ───────────────────── */}
       {tieneEvidencias && (
         <div className="bg-surface-container-lowest border border-outline-variant rounded shadow-level-1 overflow-hidden">
@@ -605,66 +575,9 @@ export default function ConvocatoriaDetailPage() {
                 <button
                   className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
                   aria-label={`Descargar ${ev.fileName}`}
-                  onClick={async () => {
-                    try {
-                      let downloadData: Blob;
-                      
-                      if (!ev.urlArchivo || ev.urlArchivo.startsWith('local://')) {
-                        // Generar archivo simulado localmente como fallback
-                        const fileExt = ev.fileName.split('.').pop()?.toLowerCase();
-                        if (fileExt === 'pdf') {
-                          downloadData = new Blob(['%PDF-1.4 ... (Evidencia de difusión simulada)'], { type: 'application/pdf' });
-                        } else if (['jpg', 'jpeg', 'png', 'webp'].includes(fileExt || '')) {
-                          // PNG transparente de 1x1
-                          const byteCharacters = atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
-                          const byteNumbers = new Array(byteCharacters.length);
-                          for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                          }
-                          const byteArray = new Uint8Array(byteNumbers);
-                          downloadData = new Blob([byteArray], { type: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}` });
-                        } else {
-                          downloadData = new Blob(['Evidencia de difusión simulada'], { type: 'text/plain' });
-                        }
-                      } else {
-                        const { data, error } = await supabase.storage.from('evidencias').download(ev.urlArchivo);
-                        if (error) throw error;
-                        downloadData = data;
-                      }
-                      
-                      const url = URL.createObjectURL(downloadData);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = ev.fileName;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    } catch (err) {
-                      console.error('Error al descargar, intentando descarga local fallback:', err);
-                      try {
-                        const fileExt = ev.fileName.split('.').pop()?.toLowerCase();
-                        let fallbackBlob: Blob;
-                        if (fileExt === 'pdf') {
-                          fallbackBlob = new Blob(['%PDF-1.4 ... (Evidencia de difusión - Fallback Local)'], { type: 'application/pdf' });
-                        } else {
-                          const byteCharacters = atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
-                          const byteNumbers = new Array(byteCharacters.length);
-                          for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                          }
-                          const byteArray = new Uint8Array(byteNumbers);
-                          fallbackBlob = new Blob([byteArray], { type: 'image/png' });
-                        }
-                        const url = URL.createObjectURL(fallbackBlob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = ev.fileName;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      } catch (fallbackErr) {
-                        console.error('Error total en descarga:', fallbackErr);
-                        alert('Error al descargar la evidencia.');
-                      }
-                    }
+                  onClick={() => {
+                    /* TODO: GET /api/v1/evidencias/{ev.id}/download */
+                    alert(`Descarga: ${ev.fileName} (disponible con backend real)`);
                   }}
                 >
                   <DownloadIcon />
