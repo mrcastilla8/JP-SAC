@@ -44,13 +44,16 @@ async def generate_report_dispatched(db: AsyncSession, params: ReportParams):
     Dispatcher (Factory) para delegar la generación del reporte al servicio adecuado
     basado en el tipo_reporte.
     """
-    if params.tipo_reporte == "Carga No Lectiva":
+    # Normalizamos o mapeamos los tipos de reporte que vienen desde el frontend
+    tipo_reporte = params.tipo_reporte.strip().lower()
+    
+    if tipo_reporte == "carga no lectiva":
         return await generate_workload_report(db, params)
-    elif params.tipo_reporte == "Proyectos Activos":
+    elif tipo_reporte == "proyectos activos":
         return await generate_active_projects_report(db, params)
-    elif params.tipo_reporte == "Produccion Cientifica":
+    elif tipo_reporte in ["produccion cientifica", "producción científica"]:
         return await generate_scientific_production_report(db, params)
-    elif params.tipo_reporte == "Resumen General":
+    elif tipo_reporte in ["resumen general", "base de datos para poi"]:
         return await generate_general_summary_report(db, params)
     else:
         raise ValueError(f"Tipo de reporte '{params.tipo_reporte}' no soportado.")
@@ -99,11 +102,11 @@ async def _calculate_workloads_batch(db: AsyncSession, params: ReportParams, inv
             "horas_asignadas": horas
         })
         
-    # Batch Query: Tesis (filtro por año por defecto actual)
+    # Batch Query: Tesis (filtro por año por defecto actual o nulo si no está en bd)
     anio_tesis = params.anio_corte or date.today().year
     stmt_tesis = select(Tesis).where(
         Tesis.dni_asesor.in_(dnis),
-        Tesis.anio_publicacion == anio_tesis
+        (Tesis.anio_publicacion == anio_tesis) | (Tesis.anio_publicacion.is_(None))
     )
     res_tesis = await db.execute(stmt_tesis)
     
@@ -164,7 +167,7 @@ async def generate_active_projects_report(db: AsyncSession, params: ReportParams
     stmt = select(Proyecto).where(Proyecto.estado_proyecto.in_(['Aprobado', 'En ejecución']))
     
     if params.grupo_investigacion:
-        stmt = stmt.where(Proyecto.codigo_grupo == params.grupo_investigacion)
+        stmt = stmt.join(GrupoInvestigacion, Proyecto.id_grupo == GrupoInvestigacion.id_grupo).where(GrupoInvestigacion.nombre_grupo == params.grupo_investigacion)
     
     if params.departamento_academico:
         subq = select(InvestigadorProyecto.codigo_proyecto).join(
@@ -210,7 +213,7 @@ async def generate_active_projects_report(db: AsyncSession, params: ReportParams
             titulo=p.titulo_proyecto,
             tipo_proyecto=p.tipo_proyecto,
             presupuesto=presupuesto,
-            grupo_investigacion=p.codigo_grupo,
+            grupo_investigacion=str(p.id_grupo) if p.id_grupo else None,
             fecha_inicio=p.fecha_inicio,
             estado=p.estado_proyecto,
             integrantes=miembros_por_proyecto.get(p.codigo_proyecto, [])
@@ -238,7 +241,7 @@ async def generate_scientific_production_report(db: AsyncSession, params: Report
             stmt_pub = stmt_pub.where(Publicacion.fecha_publicacion <= params.fecha_fin_hasta)
             
     if params.grupo_investigacion:
-        stmt_pub = stmt_pub.where(Publicacion.codigo_grupo == params.grupo_investigacion)
+        stmt_pub = stmt_pub.join(GrupoInvestigacion, Publicacion.id_grupo == GrupoInvestigacion.id_grupo).where(GrupoInvestigacion.nombre_grupo == params.grupo_investigacion)
         
     if params.departamento_academico:
         subq = select(InvestigadorPublicacion.id_publicacion).join(
@@ -285,8 +288,10 @@ async def generate_scientific_production_report(db: AsyncSession, params: Report
             
     # 2. Tesis
     stmt_tesis = select(Tesis)
-    anio_tesis = params.anio_corte or date.today().year
-    stmt_tesis = stmt_tesis.where(Tesis.anio_publicacion == anio_tesis)
+    if params.anio_corte:
+        stmt_tesis = stmt_tesis.where(
+            (Tesis.anio_publicacion == params.anio_corte) | (Tesis.anio_publicacion.is_(None))
+        )
         
     if params.departamento_academico:
         stmt_tesis = stmt_tesis.join(

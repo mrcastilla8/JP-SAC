@@ -1,4 +1,5 @@
 import json
+import requests
 from decimal import Decimal
 from typing import Any, Dict, List
 
@@ -7,29 +8,12 @@ from sgpi_ci.config import settings, DEFAULT_CHUNK_SIZE
 
 class SupabaseUploader:
     """
-    Encapsula la comunicación con Supabase mediante llamadas RPC.
+    Encapsula la comunicación con Supabase mediante llamadas RPC via HTTP REST.
     Usa SUPABASE_SERVICE_KEY para operar con SECURITY DEFINER (bypasa RLS).
     """
 
     def __init__(self) -> None:
-        self._client = None
-
-    def _get_client(self):
-        """Inicializa el cliente Supabase de forma lazy (solo cuando se necesita)."""
-        if self._client is None:
-            settings.validate()
-            try:
-                from supabase import create_client
-                self._client = create_client(
-                    settings.SUPABASE_URL,
-                    settings.SUPABASE_SERVICE_KEY,
-                )
-            except ImportError:
-                raise RuntimeError(
-                    "El paquete 'supabase' no está instalado.\n"
-                    "Ejecuta: pip install supabase"
-                )
-        return self._client
+        pass
 
     @staticmethod
     def _serialize(obj: Any) -> Any:
@@ -38,7 +22,40 @@ class SupabaseUploader:
             return float(obj)
         raise TypeError(f"Tipo no serializable: {type(obj)}")
 
+    def fetch_grupos(self) -> List[Dict[str, Any]]:
+        """Obtiene el catálogo de grupos de investigación para Fuzzy Matching de FKs."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/grupo_investigacion?select=id_grupo,nombre_grupo,siglas,codigo_grupo"
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Error obteniendo grupos de BD: {e}")
+            return []
+
+    def fetch_investigadores(self) -> List[Dict[str, Any]]:
+        """Obtiene todos los investigadores registrados para mapeo local y evitar consultas redundantes."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/investigador?select=dni,nombres,apellidos,institucion_principal,codigo_renacyt,orcid,categoria_renacyt,estado_renacyt,url_cti_vitae,investigador_sm,is_external"
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Error obteniendo investigadores de BD: {e}")
+            return []
+
     def upload(
+
         self,
         rpc_name: str,
         records: List[Dict[str, Any]],
@@ -60,7 +77,7 @@ class SupabaseUploader:
         Raises:
             ConnectionError: [EX4] Si hay un error de red durante la carga.
         """
-        client = self._get_client()
+        settings.validate()
 
         totals: Dict[str, int] = {"procesados": 0, "fallidos": 0}
 
@@ -69,6 +86,14 @@ class SupabaseUploader:
             for i in range(0, len(records), chunk_size)
         ]
         total_chunks = len(chunks)
+        
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/rpc/{rpc_name}"
 
         for idx, chunk in enumerate(chunks, 1):
             if not quiet:
@@ -80,13 +105,18 @@ class SupabaseUploader:
                     json.dumps(chunk, default=self._serialize)
                 )
 
-                response = client.rpc(
-                    rpc_name, {"payload": payload_json}
-                ).execute()
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json={"payload": payload_json}
+                )
+                
+                response.raise_for_status()
+                data = response.json()
 
-                if response.data and isinstance(response.data, dict):
-                    totals["procesados"]  += response.data.get("procesados", 0)
-                    totals["fallidos"]    += response.data.get("fallidos", 0)
+                if data and isinstance(data, dict):
+                    totals["procesados"]  += data.get("procesados", 0)
+                    totals["fallidos"]    += data.get("fallidos", 0)
 
             except Exception as e:
                 # [EX4]: Cada chunk es una llamada RPC independiente.
@@ -97,7 +127,7 @@ class SupabaseUploader:
                     f"[EX4] Error en chunk {idx}/{total_chunks} de la carga a Supabase.\n"
                     f"Los {committed} chunk(s) anteriores ya fueron commiteados y NO se revierten.\n"
                     f"Ejecuta '--preview' para diagnosticar el archivo antes de reintentar.\n"
-                    f"Detalle técnico: {e}"
+                    f"Detalle técnico: {e}\nResponse: {getattr(e.response, 'text', '') if hasattr(e, 'response') else ''}"
                 ) from e
 
         return totals

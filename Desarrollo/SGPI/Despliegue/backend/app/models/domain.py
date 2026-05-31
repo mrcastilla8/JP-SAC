@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Boolean, Integer, DateTime, Text, Foreign
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
+import uuid
 
 Base = declarative_base()
 
@@ -34,12 +35,14 @@ class Investigador(Base):
     estado_vigencia = Column(String(20), nullable=False, default='Activo')
     tiene_deuda_gi = Column(Boolean, default=False)
     tiene_deuda_pi = Column(Boolean, default=False)
+    is_external = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 class GrupoInvestigacion(Base):
     __tablename__ = 'grupo_investigacion'
-    codigo_grupo = Column(String(50), primary_key=True)
+    id_grupo = Column(Integer, primary_key=True, autoincrement=True)
+    codigo_grupo = Column(String(50), unique=True, nullable=False)
     nombre_grupo = Column(Text, nullable=False)
     siglas = Column(String(20))
     descripcion = Column(Text)
@@ -55,7 +58,7 @@ class GrupoInvestigacion(Base):
 class MiembroGrupo(Base):
     __tablename__ = 'miembro_grupo'
     id_membresia = Column(Integer, primary_key=True, autoincrement=True)
-    codigo_grupo = Column(String(50), ForeignKey('grupo_investigacion.codigo_grupo', ondelete='CASCADE'))
+    id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='CASCADE'))
     dni_investigador = Column(String(15), ForeignKey('investigador.dni', ondelete='CASCADE'))
     condicion_miembro = Column(String(50), nullable=False)
     estado_membresia = Column(String(20), default='Activo')
@@ -73,7 +76,7 @@ class Proyecto(Base):
     tipo_programa = Column(String(20))
     facultad_proyecto = Column(String(100), default='Ingeniería de Sistemas e Informática')
     presupuesto_asignado = Column(Numeric(12, 2), default=0.00)
-    codigo_grupo = Column(String(50), ForeignKey('grupo_investigacion.codigo_grupo', ondelete='SET NULL'))
+    id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='SET NULL'))
     area_academica = Column(String(100))
     anio_convocatoria = Column(Integer)
     fecha_inicio = Column(Date)
@@ -99,7 +102,7 @@ class Entregable(Base):
 
 class LogAuditoria(Base):
     __tablename__ = 'log_auditoria'
-    id_log = Column(UUID(as_uuid=True), primary_key=True)
+    id_log = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tipo_evento = Column(String(50), nullable=False)
     entidad_afectada = Column(String(100))
     pk_entidad = Column(String(100))
@@ -148,7 +151,9 @@ class Publicacion(Base):
     indexacion = Column(String(100))
     fecha_publicacion = Column(Date)
     url_documento = Column(String(255))
-    codigo_grupo = Column(String(50), ForeignKey('grupo_investigacion.codigo_grupo', ondelete='SET NULL'))
+    id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='SET NULL'))
+    estado_validacion = Column(String(50), default='Pendiente')
+    fuente_origen = Column(String(50), default='MANUAL')
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class InvestigadorPublicacion(Base):
@@ -186,6 +191,8 @@ class Tesis(Base):
     pais_publicacion = Column(String(10))
     palabras_clave = Column(JSON)
     jurados_evaluadores = Column(JSON)
+    estado_validacion = Column(String(50), default='Pendiente')
+    fuente_origen = Column(String(50), default='CYBERTESIS')
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class ProyectoEstadoHistorial(Base):
@@ -231,3 +238,9 @@ class SnapshotPOI(Base):
     datos_serializados = Column(JSON, nullable=False)
     timestamp_generacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+class ConfiguracionGlobal(Base):
+    __tablename__ = 'configuracion_global'
+    clave = Column(String(100), primary_key=True)
+    valor = Column(JSON, nullable=False)
+    descripcion = Column(Text)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
