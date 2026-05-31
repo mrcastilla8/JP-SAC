@@ -8,6 +8,7 @@ from sgpi_capirestc.api.v1.endpoints import users
 from sgpi_capirestc.api.v1.endpoints import publications
 from sgpi_capirestc.api.v1.endpoints import theses
 from sgpi_capirestc.api.v1.endpoints import search
+from sgpi_capirestc.api.v1.endpoints import import_ci
 
 api_router = APIRouter()
 
@@ -19,3 +20,4 @@ api_router.include_router(users.router, prefix="/users", tags=["Usuarios"])
 api_router.include_router(publications.router, prefix="/publications", tags=["Publicaciones"])
 api_router.include_router(theses.router, prefix="/theses", tags=["Tesis"])
 api_router.include_router(search.router, prefix="/search", tags=["Búsqueda Global"])
+api_router.include_router(import_ci.router, prefix="/import", tags=["Importación de Datos SGPI-CI"])
