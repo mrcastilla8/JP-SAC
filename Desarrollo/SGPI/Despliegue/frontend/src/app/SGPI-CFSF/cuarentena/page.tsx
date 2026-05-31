@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
 import { PageHeader } from '@/SGPI-CFU/components/shared';
-import { Button, Toast } from '@/SGPI-CFU/components/ui';
-import { syncService, type QuarantineItem, type QuarantineListData, type RelatedQuarantineTesis } from '@/SGPI-CFU/lib/services/syncService';
+import { Button } from '@/SGPI-CFU/components/ui';
+import { syncService, type QuarantineItem, type QuarantineListData } from '@/SGPI-CFU/lib/services/syncService';
 import { ApiClientError } from '@/SGPI-CFU/lib/api/client';
 
 export default function CuarentenaPage() {
@@ -14,18 +13,13 @@ export default function CuarentenaPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<QuarantineListData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Filtros
   const [estado, setEstado] = useState('Pendiente');
   const [entidad, setEntidad] = useState('');
   const [page, setPage] = useState(1);
 
-  const fetchList = useCallback(async () => {
+  const fetchList = async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -36,56 +30,20 @@ export default function CuarentenaPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, estado, entidad]);
+  };
 
   useEffect(() => {
     fetchList();
-  }, [fetchList]);
+  }, [page, estado, entidad]);
 
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [dniMap, setDniMap] = useState<Record<number, string>>({});
   const [modalItem, setModalItem] = useState<QuarantineItem | null>(null);
-  
-  const [confirmMassResolve, setConfirmMassResolve] = useState<{
-    id: number;
-    dni: string;
-    asesor: string;
-    count: number;
-    relatedItems: RelatedQuarantineTesis[];
-  } | null>(null);
 
-  const [toast, setToast] = useState<{
-    title: string;
-    description?: string;
-    variant: 'success' | 'error' | 'warning' | 'info';
-  } | null>(null);
-
-  const showToastMessage = useCallback((title: string, description?: string, variant: 'success' | 'error' | 'warning' | 'info' = 'success') => {
-    setToast({ title, description, variant });
-  }, []);
-
-  // Auto-cierra el Toast después de 4s
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  // Cierra el modal con tecla Esc
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && modalItem) {
-        setModalItem(null);
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [modalItem]);
-
-  const handleResolve = async (id: number, action: 'aprobar' | 'rechazar', requireDni: boolean, massResolve: boolean = false) => {
+  const handleResolve = async (id: number, action: 'aprobar' | 'rechazar', requireDni: boolean) => {
     const dni = dniMap[id];
     if (action === 'aprobar' && requireDni && !dni) {
-      showToastMessage('Error de Validación', 'Debes ingresar un DNI válido para aprobar esta tesis.', 'error');
+      alert('Debes ingresar un DNI válido para aprobar esta tesis.');
       return;
     }
 
@@ -94,18 +52,10 @@ export default function CuarentenaPage() {
       await syncService.resolveQuarantine(id, {
         action,
         dni_corregido: action === 'aprobar' && requireDni ? dni : undefined,
-        resolucion_masiva: massResolve,
       });
-      showToastMessage(
-        'Acción completada',
-        action === 'aprobar' 
-          ? 'El registro ha sido aprobado e integrado correctamente.' 
-          : 'El registro ha sido rechazado correctamente.',
-        'success'
-      );
       await fetchList();
     } catch (e) {
-      showToastMessage('Error', e instanceof ApiClientError ? e.message : 'Error al procesar la acción.', 'error');
+      alert(e instanceof ApiClientError ? e.message : 'Error al procesar la acción.');
     } finally {
       setResolvingId(null);
     }
@@ -120,7 +70,7 @@ export default function CuarentenaPage() {
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => router.push('/sincronizacion')}
+            onClick={() => router.push('/SGPI-CFSF')}
           >
             ← Volver a Sincronización
           </Button>
@@ -217,59 +167,28 @@ export default function CuarentenaPage() {
                         {item.estado === 'Pendiente' ? (
                           <div className="flex flex-col gap-2">
                             {isTesis && (
-                              <div className="flex flex-col gap-1.5">
-                                {!!item.datos_conflicto?.asesor_texto && (
-                                  <div className="text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                                    <span className="font-semibold">Asesor:</span> {String(item.datos_conflicto.asesor_texto)}
-                                  </div>
-                                )}
-                                <input
-                                  type="text"
-                                  placeholder="DNI del asesor"
-                                  className="h-8 px-2 text-[12px] border border-slate-300 rounded"
-                                  value={dniMap[item.id_pendiente] || ''}
-                                  onChange={(e) => setDniMap(prev => ({ ...prev, [item.id_pendiente]: e.target.value }))}
-                                />
-                              </div>
+                              <input
+                                type="text"
+                                placeholder="DNI del asesor"
+                                className="h-8 px-2 text-[12px] border border-slate-300 rounded"
+                                value={dniMap[item.id_pendiente] || ''}
+                                onChange={(e) => setDniMap(prev => ({ ...prev, [item.id_pendiente]: e.target.value }))}
+                              />
                             )}
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex gap-2">
                               <Button
                                 variant="primary"
                                 size="sm"
                                 loading={resolvingId === item.id_pendiente}
-                                onClick={() => handleResolve(item.id_pendiente, 'aprobar', isTesis, false)}
+                                onClick={() => handleResolve(item.id_pendiente, 'aprobar', isTesis)}
                               >
                                 Aprobar
                               </Button>
-                              {isTesis && item.related_count !== undefined && item.related_count > 0 && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                                  loading={resolvingId === item.id_pendiente}
-                                  onClick={() => {
-                                    const dni = dniMap[item.id_pendiente];
-                                    if (!dni) {
-                                      showToastMessage('Error de Validación', 'Debes ingresar un DNI válido para aprobar esta tesis.', 'error');
-                                      return;
-                                    }
-                                    setConfirmMassResolve({
-                                      id: item.id_pendiente,
-                                      dni: dni,
-                                      asesor: String(item.datos_conflicto?.asesor_texto || 'Desconocido'),
-                                      count: item.related_count || 0,
-                                      relatedItems: item.related_items || []
-                                    });
-                                  }}
-                                >
-                                  Resolución Masiva {`(+${item.related_count})`}
-                                </Button>
-                              )}
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 disabled={resolvingId === item.id_pendiente}
-                                onClick={() => handleResolve(item.id_pendiente, 'rechazar', false, false)}
+                                onClick={() => handleResolve(item.id_pendiente, 'rechazar', false)}
                               >
                                 Rechazar
                               </Button>
@@ -277,7 +196,7 @@ export default function CuarentenaPage() {
                           </div>
                         ) : (
                           <div className="text-[12px] text-slate-500">
-                            Resuelto: {item.fecha_revision ? new Date(item.fecha_revision).toLocaleString('es-PE') : 'Fecha no registrada'}
+                            Resuelto: {new Date(item.fecha_revision || '').toLocaleString('es-PE')}
                           </div>
                         )}
                       </td>
@@ -299,8 +218,8 @@ export default function CuarentenaPage() {
       )}
 
       {/* Modal de Detalles del Payload */}
-      {mounted && modalItem && createPortal(
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black bg-opacity-50 p-4">
+      {modalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-200">
             <div className="px-5 py-3.5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <div>
@@ -322,74 +241,7 @@ export default function CuarentenaPage() {
               <Button variant="secondary" size="md" onClick={() => setModalItem(null)}>Cerrar Modal</Button>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Modal de Confirmación de Resolución Masiva */}
-      {mounted && confirmMassResolve && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white rounded shadow-xl max-w-lg w-full p-6 flex flex-col border border-slate-200">
-            <h3 className="font-bold text-lg text-slate-800 mb-2">Confirmación de Resolución Masiva</h3>
-            <div className="text-[13px] text-slate-600 mb-4 leading-relaxed flex flex-col gap-3">
-              <p>
-                Se han encontrado <span className="font-bold text-indigo-600">{confirmMassResolve.count} tesis adicionales</span> en cuarentena asociadas al asesor &ldquo;<span className="font-semibold">{confirmMassResolve.asesor}</span>&rdquo;.
-              </p>
-              
-              <div className="bg-slate-50 border border-slate-200 rounded p-3 max-h-[180px] overflow-y-auto">
-                <span className="font-semibold text-slate-700 block mb-1 text-[12px]">Tesis afectadas que se aprobarán:</span>
-                <ul className="list-disc pl-5 space-y-1 text-[12px] text-slate-600">
-                  {confirmMassResolve.relatedItems.map((tesis, i) => (
-                    <li key={tesis.id_pendiente || i}>
-                      <span className="font-medium text-slate-800">&ldquo;{tesis.titulo_tesis}&rdquo;</span>
-                      <span className="text-slate-400 font-sans text-[11px] block">Estudiante/Autor: {tesis.autor}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <p>
-                Si apruebas este registro con el DNI <span className="font-mono font-semibold bg-slate-100 px-1 py-0.5 rounded">{confirmMassResolve.dni}</span>, las otras tesis también se actualizarán y aprobarán de forma automática. ¿Deseas continuar?
-              </p>
-            </div>
-            <div className="flex justify-end gap-3 mt-2">
-              <Button variant="secondary" onClick={() => setConfirmMassResolve(null)}>Cancelar</Button>
-              <Button 
-                variant="primary" 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                onClick={() => {
-                  handleResolve(confirmMassResolve.id, 'aprobar', true, true);
-                  setConfirmMassResolve(null);
-                }}
-              >
-                Confirmar y Aprobar
-              </Button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Toast de éxito/error (centrado en la pantalla con estilos inline para evitar interferencias de layout o compilación) */}
-      {mounted && toast && createPortal(
-        <div
-          aria-live="polite"
-          style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 9999,
-          }}
-          className="shadow-2xl animate-fade-in"
-        >
-          <Toast
-            variant={toast.variant}
-            title={toast.title}
-            description={toast.description}
-          />
-        </div>,
-        document.body
+        </div>
       )}
     </MainLayout>
   );

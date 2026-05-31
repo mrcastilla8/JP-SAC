@@ -31,14 +31,10 @@ interface CybertesisFilters {
   yearEnd: string;
   degree: string;         // '' = todos | 'pregrado' | 'maestria' | 'doctorado'
   byDocentes: boolean;    // también buscar por docentes en BD
-  maxDocentes: string;    // límite de docentes a consultar
-  onlyReconcileLocal: boolean; // solo buscar asesores registrados en BD local
 }
 interface RenacytFilters {
   enabled: boolean;
   mode: 'update' | 'expanded' | 'both'; // update=solo DNIs en BD, expanded=UNMSM, both=ambos
-  maxUpdate: string;   // límite de investigadores existentes a actualizar ('' = todos)
-  maxNuevos: string;   // límite de nuevos investigadores a descubrir ('' = sin límite)
 }
 
 interface FormState {
@@ -64,31 +60,12 @@ const INITIAL: FormState = {
     yearEnd: currentYear,
     degree: '',
     byDocentes: true,
-    maxDocentes: '100',
-    onlyReconcileLocal: true,
   },
   renacyt: {
     enabled: true,
     mode: 'both',
-    maxUpdate: '',
-    maxNuevos: '50',
   },
 };
-
-// Intenta cargar el borrador de localStorage
-function getSavedForm(): FormState {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('sgpi_sync_draft');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // Fallback a inicial en caso de error
-      }
-    }
-  }
-  return INITIAL;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -96,7 +73,7 @@ function nowTime() {
   return new Date().toLocaleTimeString('es-PE', { hour12: false });
 }
 function addLog(prev: LogEntry[], level: LogLevel, text: string): LogEntry[] {
-  return [...prev.slice(-199), { time: nowTime(), level, text }];
+  return [...prev.slice(-39), { time: nowTime(), level, text }];
 }
 function healthToStatus(h?: SourceHealth): 'online' | 'unavailable' | 'loading' {
   if (!h) return 'unavailable';
@@ -135,10 +112,10 @@ const IconChevron = ({ open }: { open: boolean }) => (
 // ─── Sub-componente: Toggle del conector ──────────────────────────────────────
 
 const LOG_COLORS: Record<string, string> = {
-  INFO:    'text-sky-600',
-  SUCCESS: 'text-emerald-600',
-  WARN:    'text-amber-600',
-  ERROR:   'text-red-600',
+  INFO:    'text-sky-400',
+  SUCCESS: 'text-emerald-400',
+  WARN:    'text-amber-400',
+  ERROR:   'text-red-400',
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -260,7 +237,7 @@ const selectCls = inputCls + " cursor-pointer";
 
 export default function SincronizacionDeFuentesPage() {
   const router = useRouter();
-  const [form, setForm]           = useState<FormState>(getSavedForm);
+  const [form, setForm]           = useState<FormState>(INITIAL);
   const [healthData, setHealthData] = useState<SourcesHealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [running, setRunning]     = useState(false);
@@ -269,69 +246,16 @@ export default function SincronizacionDeFuentesPage() {
   const [logs, setLogs]           = useState<LogEntry[]>([
     { time: '--:--:--', level: 'INFO', text: 'Sistema listo. Configure los conectores y sus filtros, luego ejecute la sincronización.' },
   ]);
-  const logContainerRef = useRef<HTMLDivElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-guardado en localStorage
+  // Auto-scroll al final del log
   useEffect(() => {
-    localStorage.setItem('sgpi_sync_draft', JSON.stringify(form));
-  }, [form]);
-
-  // Auto-scroll al final del log (solo del contenedor de la consola)
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTo({
-        top: logContainerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // ── Polling ───────────────────────────────────────────────────────────────
-  const pollJob = useCallback((id: string) => {
-    const iv = setInterval(async () => {
-      try {
-        const st = await syncService.getJobStatus(id);
-        
-        if (st.progress_logs && st.progress_logs.length > 0) {
-          setLogs([
-            { time: '--:--:--', level: 'INFO', text: 'Sistema listo. Configure los conectores y sus filtros, luego ejecute la sincronización.' },
-            ...st.progress_logs
-          ]);
-        } else if (st.status === 'running') {
-          setLogs((p) => addLog(p, 'INFO', `En proceso… [${st.sources.join(' · ')}]`));
-        }
-
-        if (st.status === 'completed') {
-          clearInterval(iv);
-          setRunning(false);
-          if (st.report) {
-            sessionStorage.setItem('sgpi_sync_report', JSON.stringify(st.report));
-            sessionStorage.setItem('sgpi_sync_job_id', id);
-          }
-          setLogs((p) => addLog(p, 'SUCCESS', '✓ Sincronización completada. Redirigiendo a resultados…'));
-          setTimeout(() => router.push('/sincronizacion/resultados'), 1500);
-        }
-        if (st.status === 'stopped') {
-          clearInterval(iv);
-          setRunning(false);
-          setLogs((p) => addLog(p, 'WARN', 'Sincronización detenida por el usuario.'));
-        }
-        if (st.status === 'failed') {
-          clearInterval(iv);
-          setRunning(false);
-          setErrorMsg(st.error ?? 'El proceso falló en el servidor.');
-        }
-      } catch {
-        setLogs((p) => addLog(p, 'WARN', 'Error temporal consultando estado — reintentando…'));
-      }
-    }, 2000);
-  }, [router]);
-
-  // Carga inicial de salud y chequeo de job activo
+  // Carga inicial de salud
   useEffect(() => {
     let cancelled = false;
-    
-    // Verificar salud de conectores
     syncService.getSourcesHealth()
       .then((d) => { if (!cancelled) setHealthData(d); })
       .catch(() => {
@@ -339,64 +263,51 @@ export default function SincronizacionDeFuentesPage() {
           setLogs((p) => addLog(p, 'WARN', 'No se pudo verificar el estado de los conectores en el servidor.'));
       })
       .finally(() => { if (!cancelled) setHealthLoading(false); });
-
-    // Verificar si hay una sincronización activa
-    syncService.getActiveJob()
-      .then((res) => {
-        if (cancelled) return;
-        if (res) {
-          const activeJob = res;
-          setJobId(activeJob.job_id);
-          setRunning(true);
-          
-          // Restaurar estado del formulario para que sea persistente en la interfaz
-          setForm((prev) => {
-             const vripEnabled = activeJob.sources.includes('VRIP');
-             const cybEnabled = activeJob.sources.includes('CYBERTESIS');
-             const renEnabled = activeJob.sources.includes('RENACYT');
-             const f = activeJob.filters || {};
-             
-             return {
-               vrip: {
-                 enabled: vripEnabled,
-                 year: f.vrip_year?.toString() || prev.vrip.year,
-                 program: f.vrip_program || '',
-                 query: f.vrip_query || '',
-               },
-               cybertesis: {
-                 enabled: cybEnabled,
-                 yearStart: f.year_start?.toString() || '',
-                 yearEnd: f.year_end?.toString() || '',
-                 degree: f.degree || '',
-                 byDocentes: f.by_docentes ?? true,
-                 maxDocentes: f.max_docentes_cybertesis?.toString() || '100',
-                 onlyReconcileLocal: f.only_reconcile_local ?? true,
-               },
-               renacyt: {
-                 enabled: renEnabled,
-                 mode: (f.renacyt_mode as 'update'|'expanded'|'both') || (f.expanded_search ? 'expanded' : 'update'),
-                 maxUpdate: f.renacyt_max_update?.toString() || '',
-                 maxNuevos: f.renacyt_max_new?.toString() || '',
-               }
-             };
-          });
-
-          if (activeJob.progress_logs && activeJob.progress_logs.length > 0) {
-            setLogs([
-              { time: '--:--:--', level: 'INFO', text: 'Sistema listo. Configure los conectores y sus filtros, luego ejecute la sincronización.' },
-              ...activeJob.progress_logs
-            ]);
-          }
-          setLogs((p) => addLog(p, 'INFO', `Sincronización activa detectada en el servidor [${activeJob.job_id.slice(0, 8)}…]. Monitoreando...`));
-          pollJob(activeJob.job_id);
-        }
-      })
-      .catch((e) => {
-        console.error('Error al consultar job activo:', e);
-      });
-
     return () => { cancelled = true; };
-  }, [pollJob]);
+  }, []);
+
+  // ── Polling ───────────────────────────────────────────────────────────────
+  const pollJob = useCallback((id: string) => {
+    let attempts = 0;
+    const MAX = 360;
+    const iv = setInterval(async () => {
+      attempts++;
+      if (attempts > MAX) {
+        clearInterval(iv);
+        setRunning(false);
+        setLogs((p) => addLog(p, 'WARN', 'Tiempo de espera agotado. El job puede seguir en el servidor.'));
+        return;
+      }
+      try {
+        const st = await syncService.getJobStatus(id);
+        if (st.status === 'running') {
+          setLogs((p) => addLog(p, 'INFO', `En proceso… [${st.sources.join(' · ')}]`));
+        }
+        if (st.status === 'completed') {
+          clearInterval(iv);
+          setRunning(false);
+          if (st.report) {
+            for (const [src, rep] of Object.entries(st.report)) {
+              setLogs((p) => addLog(p, rep.errores > 0 ? 'WARN' : 'SUCCESS',
+                `${src} — procesados: ${rep.procesados}, reconciliados: ${rep.resueltos}, cuarentena: ${rep.cuarentena}, errores: ${rep.errores}`));
+            }
+            sessionStorage.setItem('sgpi_sync_report', JSON.stringify(st.report));
+            sessionStorage.setItem('sgpi_sync_job_id', id);
+          }
+          setLogs((p) => addLog(p, 'SUCCESS', '✓ Sincronización completada. Redirigiendo a resultados…'));
+          setTimeout(() => router.push('/SGPI-CFSF/resultados'), 1500);
+        }
+        if (st.status === 'failed') {
+          clearInterval(iv);
+          setRunning(false);
+          setErrorMsg(st.error ?? 'El proceso falló en el servidor.');
+          setLogs((p) => addLog(p, 'ERROR', `Fallo: ${st.error ?? 'Error desconocido'}`));
+        }
+      } catch {
+        setLogs((p) => addLog(p, 'WARN', 'Error temporal consultando estado — reintentando…'));
+      }
+    }, 5000);
+  }, [router]);
 
   // ── Lanzar sincronización ─────────────────────────────────────────────────
   const handleRun = async () => {
@@ -426,21 +337,13 @@ export default function SincronizacionDeFuentesPage() {
       filters.vrip_query   = form.vrip.query.trim() || undefined;
     }
     if (form.cybertesis.enabled) {
-      filters.year_start              = form.cybertesis.yearStart ? parseInt(form.cybertesis.yearStart) : undefined;
-      filters.year_end                = form.cybertesis.yearEnd   ? parseInt(form.cybertesis.yearEnd)   : undefined;
-      filters.degree                  = form.cybertesis.degree    || undefined;
-      filters.by_docentes             = form.cybertesis.byDocentes;
-      filters.max_docentes_cybertesis = form.cybertesis.maxDocentes ? parseInt(form.cybertesis.maxDocentes) : undefined;
-      filters.only_reconcile_local    = form.cybertesis.onlyReconcileLocal;
+      filters.year_start     = form.cybertesis.yearStart ? parseInt(form.cybertesis.yearStart) : undefined;
+      filters.year_end       = form.cybertesis.yearEnd   ? parseInt(form.cybertesis.yearEnd)   : undefined;
+      filters.degree         = form.cybertesis.degree    || undefined;
+      filters.by_docentes    = form.cybertesis.byDocentes;
     }
     if (form.renacyt.enabled) {
       filters.renacyt_mode = form.renacyt.mode;
-      if (form.renacyt.maxUpdate.trim()) {
-        filters.renacyt_max_update = parseInt(form.renacyt.maxUpdate);
-      }
-      if (form.renacyt.maxNuevos.trim()) {
-        filters.renacyt_max_new = parseInt(form.renacyt.maxNuevos);
-      }
     }
 
     try {
@@ -453,23 +356,6 @@ export default function SincronizacionDeFuentesPage() {
       const msg = e instanceof ApiClientError ? e.message : 'No se pudo conectar al servidor.';
       setErrorMsg(msg);
       setLogs((p) => addLog(p, 'ERROR', `Error al lanzar: ${msg}`));
-    }
-  };
-
-  // ── Detener sincronización ────────────────────────────────────────────────
-  const handleStop = async () => {
-    if (!jobId) return;
-    try {
-      setLogs((p) => addLog(p, 'INFO', 'Solicitando detención de la sincronización...'));
-      const res = await syncService.stopJob(jobId);
-      if (res.success) {
-        setLogs((p) => addLog(p, 'SUCCESS', 'Detención solicitada con éxito. Esperando respuesta...'));
-      } else {
-        setLogs((p) => addLog(p, 'WARN', `Mensaje del servidor: ${res.message}`));
-      }
-    } catch (e) {
-      const msg = e instanceof ApiClientError ? e.message : 'No se pudo conectar al servidor.';
-      setLogs((p) => addLog(p, 'ERROR', `Error al detener: ${msg}`));
     }
   };
 
@@ -497,19 +383,10 @@ export default function SincronizacionDeFuentesPage() {
             <Button
               variant="secondary"
               size="lg"
-              onClick={() => router.push('/sincronizacion/cuarentena')}
+              onClick={() => router.push('/SGPI-CFSF/cuarentena')}
             >
               Revisar Cuarentena
             </Button>
-            {running && (
-              <Button
-                variant="danger"
-                size="lg"
-                onClick={handleStop}
-              >
-                Detener Sincronización
-              </Button>
-            )}
             <Button
               variant="primary"
               size="lg"
@@ -660,33 +537,6 @@ export default function SincronizacionDeFuentesPage() {
               </span>
             </label>
 
-            {form.cybertesis.byDocentes && (
-              <Field label="Límite de docentes a consultar">
-                <input
-                  type="number"
-                  min="1"
-                  max="1000"
-                  className={inputCls}
-                  value={form.cybertesis.maxDocentes}
-                  onChange={(e) => setCybertesis({ maxDocentes: e.target.value })}
-                  disabled={running}
-                />
-              </Field>
-            )}
-
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-[#001631] cursor-pointer"
-                checked={form.cybertesis.onlyReconcileLocal}
-                onChange={(e) => setCybertesis({ onlyReconcileLocal: e.target.checked })}
-                disabled={running}
-              />
-              <span className="font-sans text-[12px] text-emerald-700 font-semibold">
-                Sincronización estricta (reconciliar solo docentes locales de la BD)
-              </span>
-            </label>
-
             <p className="text-[11px] text-on-surface-variant font-sans bg-slate-50 rounded px-2.5 py-2">
               <strong>Extrae:</strong> tesis de FISI-UNMSM con título, autores, asesores, URL, grado y año. Permite vincular asesorías con investigadores.
             </p>
@@ -747,40 +597,6 @@ export default function SincronizacionDeFuentesPage() {
             <p className="text-[11px] text-on-surface-variant font-sans bg-slate-50 rounded px-2.5 py-2">
               <strong>Extrae:</strong> nivel RENACYT (I–VII), código CTI Vitae, ORCID, grado académico e institución principal. Sin filtro de año (registro activo por reglamento).
             </p>
-
-            {/* Límites de cantidad */}
-            <div className="grid grid-cols-2 gap-3 border-t border-[#f1f5f9] pt-3 mt-1">
-              {(form.renacyt.mode === 'update' || form.renacyt.mode === 'both') && (
-                <Field label="Máx. existentes a actualizar">
-                  <input
-                    type="number"
-                    min="1"
-                    max="500"
-                    className={inputCls}
-                    placeholder="Todos (sin límite)"
-                    value={form.renacyt.maxUpdate}
-                    onChange={(e) => setRenacyt({ maxUpdate: e.target.value })}
-                    disabled={running}
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1 font-sans">~1s por investigador</p>
-                </Field>
-              )}
-              {(form.renacyt.mode === 'expanded' || form.renacyt.mode === 'both') && (
-                <Field label="Máx. nuevos a descubrir">
-                  <input
-                    type="number"
-                    min="1"
-                    max="5000"
-                    className={inputCls}
-                    placeholder="Sin límite"
-                    value={form.renacyt.maxNuevos}
-                    onChange={(e) => setRenacyt({ maxNuevos: e.target.value })}
-                    disabled={running}
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1 font-sans">50 = ~1 pág. RENACYT</p>
-                </Field>
-              )}
-            </div>
           </ConnectorCard>
         </div>
 
@@ -834,30 +650,28 @@ export default function SincronizacionDeFuentesPage() {
           </div>
 
           {/* Consola de log */}
-          <div className="rounded border border-[#e2e8f0] bg-white overflow-hidden shadow-sm flex-1">
-            <div className="bg-slate-100/70 border-b border-[#e2e8f0] px-4 py-2.5 flex items-center justify-between">
-              <span className="font-sans text-[11px] font-bold tracking-[0.08em] uppercase text-slate-500">
+          <div className="rounded border border-[#334155] overflow-hidden shadow-sm flex-1">
+            <div className="bg-[#1e293b] px-4 py-2.5 flex items-center justify-between">
+              <span className="font-sans text-[11px] font-bold tracking-[0.08em] uppercase text-slate-400">
                 Consola de Sistema
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400 opacity-80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 opacity-80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 opacity-80" />
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 opacity-70" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 opacity-70" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 opacity-70" />
               </div>
             </div>
-            <div
-              ref={logContainerRef}
-              className="bg-slate-50 px-4 py-3.5 font-mono text-[11.5px] leading-6 min-h-[280px] max-h-[480px] overflow-y-auto"
-            >
+            <div className="bg-[#0f172a] px-4 py-3.5 font-mono text-[11.5px] leading-6 min-h-[280px] max-h-[480px] overflow-y-auto">
               {logs.map((log, i) => (
                 <div key={i} className="flex gap-2">
-                  <span className="text-slate-400 shrink-0">[{log.time}]</span>
+                  <span className="text-slate-600 shrink-0">[{log.time}]</span>
                   <span className={`shrink-0 font-bold w-[54px] ${LOG_COLORS[log.level]}`}>[{log.level}]</span>
-                  <span className={i === logs.length - 1 && log.level === 'SUCCESS' ? 'text-emerald-600 font-semibold' : 'text-slate-700'}>
+                  <span className={i === logs.length - 1 && log.level === 'SUCCESS' ? 'text-emerald-400' : 'text-slate-300'}>
                     {log.text}
                   </span>
                 </div>
               ))}
+              <div ref={logEndRef} />
             </div>
           </div>
         </div>
