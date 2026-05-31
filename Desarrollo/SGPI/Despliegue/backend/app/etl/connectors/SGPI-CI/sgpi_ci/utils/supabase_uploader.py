@@ -38,24 +38,7 @@ class SupabaseUploader:
             print(f"Error obteniendo grupos de BD: {e}")
             return []
 
-    def fetch_investigadores(self) -> List[Dict[str, Any]]:
-        """Obtiene todos los investigadores registrados para mapeo local y evitar consultas redundantes."""
-        settings.validate()
-        headers = {
-            "apikey": settings.SUPABASE_SERVICE_KEY,
-            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
-        }
-        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/investigador?select=dni,nombres,apellidos,institucion_principal,codigo_renacyt,orcid,categoria_renacyt,estado_renacyt,url_cti_vitae,investigador_sm,is_external"
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            print(f"Error obteniendo investigadores de BD: {e}")
-            return []
-
     def upload(
-
         self,
         rpc_name: str,
         records: List[Dict[str, Any]],

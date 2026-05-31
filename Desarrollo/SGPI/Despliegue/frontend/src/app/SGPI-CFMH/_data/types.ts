@@ -65,7 +65,6 @@ export interface DocenteInvestigador {
   // Auditoría
   creadoEn?:             string;
   actualizadoEn?:        string;
-  isExternal?:           boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

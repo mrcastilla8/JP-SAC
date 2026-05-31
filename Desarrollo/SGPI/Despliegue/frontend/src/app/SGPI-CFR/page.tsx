@@ -21,21 +21,12 @@ import type {
   ReporteParams, ReporteResult, TipoReporte, CortesPOI, NivelDetalle,
 } from './_data/types';
 import {
-  generarReporte, guardarSnapshot, obtenerCatalogos,
+  generarReporte, guardarSnapshot, exportarReporte,
   PASOS_CARGA, UMBRAL_ALTO, UMBRAL_BAJO,
 } from './_data/service';
-import { ExportButton } from '@/SGPI-CFU/components/SGPI-CFE/export/ExportFlow';
-
-const getExportContext = (tipo: string) => {
-  switch(tipo) {
-    case 'actividades': return 'Carga No Lectiva';
-    case 'proyectosActivos': return 'Proyectos Activos';
-    case 'produccionCientifica': return 'Produccion Cientifica';
-    case 'baseDatosPOI': return 'Resumen General';
-    default: return 'Resumen General';
-  }
-};
-
+import {
+  DEPARTAMENTOS_ACADEMICOS, GRUPOS_INVESTIGACION, AÑOS_FISCALES,
+} from './_data/mock';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -50,7 +41,7 @@ const DEFAULT_PARAMS: ReporteParams = {
   corte:              'agosto',
   fechaInicio:        '',
   fechaFin:           '',
-  departamentos:      [],
+  departamentos:      [DEPARTAMENTOS_ACADEMICOS[0], DEPARTAMENTOS_ACADEMICOS[1]],
   grupoInvestigacion: '',
   nivelDetalle:       'resumido',
 };
@@ -444,21 +435,6 @@ function FormularioReporte({ onGenerar }: { onGenerar: (p: ReporteParams) => voi
   const [p, setP] = useState<ReporteParams>(DEFAULT_PARAMS);
   const [ex1, setEx1] = useState<string | null>(null);
 
-  const [departamentosData, setDepartamentosData] = useState<string[] | null>(null);
-  const [gruposData, setGruposData] = useState<string[] | null>(null);
-  const aniosFiscalesData = useMemo(() => [CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2], []);
-
-  useEffect(() => {
-    obtenerCatalogos().then(data => {
-      setDepartamentosData(data.departamentos || []);
-      setGruposData(data.grupos || []);
-      // Pre-seleccionar los dos primeros departamentos si hay datos
-      if (data.departamentos && data.departamentos.length > 0) {
-        setP(prev => ({ ...prev, departamentos: data.departamentos.slice(0, 2) }));
-      }
-    });
-  }, []);
-
   const toggleDept = (dept: string) => {
     setP((prev) => ({
       ...prev,
@@ -520,7 +496,6 @@ function FormularioReporte({ onGenerar }: { onGenerar: (p: ReporteParams) => voi
                   options={[
                     { value: 'actividades',      label: 'Reporte de Actividades' },
                     { value: 'proyectosActivos',  label: 'Proyectos Activos' },
-                    { value: 'produccionCientifica', label: 'Producción Científica' },
                     { value: 'baseDatosPOI',      label: 'Base de Datos para POI' },
                   ]}
                 />
@@ -536,7 +511,7 @@ function FormularioReporte({ onGenerar }: { onGenerar: (p: ReporteParams) => voi
                   id="anio-fiscal" label="Año fiscal"
                   value={p.anioFiscal}
                   onChange={(v) => setP({ ...p, anioFiscal: Number(v) })}
-                  options={aniosFiscalesData.map((a) => ({ value: a, label: String(a) }))}
+                  options={AÑOS_FISCALES.map((a) => ({ value: a, label: String(a) }))}
                 />
               </div>
 
@@ -599,12 +574,8 @@ function FormularioReporte({ onGenerar }: { onGenerar: (p: ReporteParams) => voi
                 <p className="font-sans font-bold text-[11px] text-on-surface uppercase tracking-wider mb-2">
                   Departamentos Académicos
                 </p>
-                <div className="border border-outline-variant rounded p-3 flex flex-col gap-2 max-h-[150px] overflow-y-auto">
-                  {departamentosData === null ? (
-                    <span className="text-[12px] text-on-surface-variant italic">Cargando...</span>
-                  ) : departamentosData.length === 0 ? (
-                    <span className="text-[12px] text-on-surface-variant italic">No hay departamentos</span>
-                  ) : departamentosData.map((d) => (
+                <div className="border border-outline-variant rounded p-3 flex flex-col gap-2">
+                  {DEPARTAMENTOS_ACADEMICOS.map((d) => (
                     <Checkbox key={d} id={`dept-${d}`} label={d}
                       checked={p.departamentos.includes(d)}
                       onChange={() => toggleDept(d)}
@@ -625,7 +596,7 @@ function FormularioReporte({ onGenerar }: { onGenerar: (p: ReporteParams) => voi
                   onChange={(v) => setP({ ...p, grupoInvestigacion: v })}
                   options={[
                     { value: '', label: 'Todos los grupos' },
-                    ...(gruposData || []).map((g) => ({ value: g, label: g })),
+                    ...GRUPOS_INVESTIGACION.map((g) => ({ value: g, label: g })),
                   ]}
                 />
               </div>
@@ -689,10 +660,20 @@ function VistaResultados({
   const [page,              setPage]              = useState(1);
   const [showSnapshotModal, setShowSnapshotModal] = useState(false);
   const [showToast,         setShowToast]         = useState(false);
-
+  const [isExporting,       setIsExporting]       = useState(false);
+  const [showExportMenu,    setShowExportMenu]    = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-
+  // Cerrar menú al click fuera
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node))
+        setShowExportMenu(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Limpiar timer al desmontar
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -724,7 +705,13 @@ function VistaResultados({
     toastTimerRef.current = setTimeout(() => setShowToast(false), 2000);
   };
 
-
+  // ── Exportar ────────────────────────────────────────────────────────────────
+  const handleExport = async (fmt: 'pdf' | 'excel') => {
+    setIsExporting(true);
+    setShowExportMenu(false);
+    await exportarReporte(result, fmt);
+    setIsExporting(false);
+  };
 
   // ── Color de carga ──────────────────────────────────────────────────────────
   const cargaColor = (total: number) => {
@@ -763,10 +750,39 @@ function VistaResultados({
 
         {/* Botones exportar / snapshot */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <ExportButton 
-            context={getExportContext(result.params.tipo)} 
-            label="Exportar" 
-          />
+          {/* Exportar con dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setShowExportMenu((v) => !v)}
+              disabled={isExporting}
+              className="
+                flex items-center gap-1.5
+                px-4 py-2 rounded
+                font-sans font-semibold text-[13px]
+                text-on-surface border border-outline-variant
+                hover:bg-surface-container
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors duration-100
+              "
+              aria-label="Menú de exportación"
+            >
+              <ExportIcon />
+              {isExporting ? 'Exportando...' : 'Exportar'}
+              <ChevronDown />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-[160px] bg-white border border-outline-variant rounded shadow-level-2 overflow-hidden z-10">
+                <button onClick={() => handleExport('pdf')}
+                  className="w-full text-left px-4 py-2.5 font-sans text-[13px] text-on-surface hover:bg-surface-container transition-colors">
+                  Exportar PDF
+                </button>
+                <button onClick={() => handleExport('excel')}
+                  className="w-full text-left px-4 py-2.5 font-sans text-[13px] text-on-surface hover:bg-surface-container transition-colors">
+                  Exportar Excel
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Guardar snapshot */}
           <button
@@ -788,38 +804,21 @@ function VistaResultados({
 
       {/* ── KPIs ─────────────────────────────────────────────────────────────── */}
       <div className="flex gap-4 mb-6 flex-wrap">
-        {result.params.tipo === 'produccionCientifica' ? (
-          <>
-            <KPICard
-              icon={<FileTextIcon />} label="Total Publicaciones"
-              value={result.totalPublicaciones || 0}
-              color="bg-[#dbeafe] text-[#1d4ed8]"
-            />
-            <KPICard
-              icon={<CheckCircleIcon />} label="Total Tesis"
-              value={result.totalTesis || 0}
-              color="bg-[#dcfce7] text-[#166534]"
-            />
-          </>
-        ) : (
-          <>
-            <KPICard
-              icon={<UsersIcon />} label="Total Docentes Evaluados"
-              value={result.totalDocentes}
-              color="bg-[#dbeafe] text-[#1d4ed8]"
-            />
-            <KPICard
-              icon={<CheckCircleIcon />} label="Proyectos Activos"
-              value={result.proyectosActivos}
-              color="bg-[#dcfce7] text-[#166534]"
-            />
-            <KPICard
-              icon={<ClockIcon />} label="Promedio Carga No Lectiva"
-              value={`${result.promedioCargaNoLectiva} hrs`}
-              color="bg-[#fef3c7] text-[#b45309]"
-            />
-          </>
-        )}
+        <KPICard
+          icon={<UsersIcon />} label="Total Docentes Evaluados"
+          value={result.totalDocentes}
+          color="bg-[#dbeafe] text-[#1d4ed8]"
+        />
+        <KPICard
+          icon={<CheckCircleIcon />} label="Proyectos Activos"
+          value={result.proyectosActivos}
+          color="bg-[#dcfce7] text-[#166534]"
+        />
+        <KPICard
+          icon={<ClockIcon />} label="Promedio Carga No Lectiva"
+          value={`${result.promedioCargaNoLectiva} hrs`}
+          color="bg-[#fef3c7] text-[#b45309]"
+        />
       </div>
 
       {/* ── Tabla ────────────────────────────────────────────────────────────── */}
@@ -864,19 +863,12 @@ function VistaResultados({
             <table className="w-full border-collapse" role="table">
               <thead>
                 <tr className="border-b border-outline-variant bg-surface-container-low">
-                  {result.params.tipo === 'produccionCientifica' ? (
-                    ['Título de Publicación', 'DOI / Tipo', 'Revista / Indexación'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left font-sans font-bold text-[11px] text-on-surface uppercase tracking-widest whitespace-nowrap">{h}</th>
-                    ))
-                  ) : result.params.tipo === 'proyectosActivos' ? (
-                    ['Título del Proyecto', 'Código', 'Estado'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left font-sans font-bold text-[11px] text-on-surface uppercase tracking-widest whitespace-nowrap">{h}</th>
-                    ))
-                  ) : (
-                    ['Nombre del Docente', 'DNI', 'Departamento', 'Hrs Proyectos', 'Hrs Asesorías', 'Total Carga'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left font-sans font-bold text-[11px] text-on-surface uppercase tracking-widest whitespace-nowrap">{h}</th>
-                    ))
-                  )}
+                  {['Nombre del Docente', 'DNI', 'Departamento', 'Hrs Proyectos', 'Hrs Asesorías', 'Total Carga'].map((h) => (
+                    <th key={h}
+                      className="px-4 py-3 text-left font-sans font-bold text-[11px] text-on-surface uppercase tracking-widest whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -891,19 +883,15 @@ function VistaResultados({
                     <td className="px-4 py-3 font-sans text-[13px] text-on-surface">
                       {r.departamento}
                     </td>
-                    {result.params.tipo !== 'produccionCientifica' && result.params.tipo !== 'proyectosActivos' && (
-                      <>
-                        <td className="px-4 py-3 font-sans text-[13px] text-on-surface text-right">
-                          {r.hrsProyectos}
-                        </td>
-                        <td className="px-4 py-3 font-sans text-[13px] text-on-surface text-right">
-                          {r.hrsAsesorias}
-                        </td>
-                        <td className={`px-4 py-3 font-sans text-[13px] text-right ${cargaColor(r.totalCarga)}`}>
-                          {r.totalCarga}
-                        </td>
-                      </>
-                    )}
+                    <td className="px-4 py-3 font-sans text-[13px] text-on-surface text-right">
+                      {r.hrsProyectos}
+                    </td>
+                    <td className="px-4 py-3 font-sans text-[13px] text-on-surface text-right">
+                      {r.hrsAsesorias}
+                    </td>
+                    <td className={`px-4 py-3 font-sans text-[13px] text-right ${cargaColor(r.totalCarga)}`}>
+                      {r.totalCarga}
+                    </td>
                   </tr>
                 ))}
               </tbody>

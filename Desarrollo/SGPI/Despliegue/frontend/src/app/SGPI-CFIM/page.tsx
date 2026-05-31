@@ -35,6 +35,14 @@ function useMockAuth() {
 // Constantes
 // ─────────────────────────────────────────────────────────────────────────────
 
+type ImportEntity = 'proyectos' | 'docentes' | 'publicaciones';
+
+const ENTITY_OPTIONS: { value: ImportEntity; label: string }[] = [
+  { value: 'proyectos',     label: 'Proyectos de Investigación' },
+  { value: 'docentes',      label: 'Docentes / Investigadores' },
+  { value: 'publicaciones', label: 'Publicaciones / Tesis' },
+];
+
 const MAX_FILE_SIZE_MB    = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_EXTENSIONS  = ['.csv', '.xlsx'];
@@ -117,6 +125,7 @@ export default function ImportacionDeDatosPage() {
   const { user }  = useMockAuth();
   const router    = useRouter();
 
+  const [selectedEntity, setSelectedEntity] = useState<ImportEntity>('proyectos');
   const [isDragging,     setIsDragging]     = useState(false);
   const [selectedFile,   setSelectedFile]   = useState<File | null>(null);
   const [fileError,      setFileError]      = useState<string | null>(null);
@@ -180,7 +189,7 @@ export default function ImportacionDeDatosPage() {
 
       // Persistir metadatos en sessionStorage para las pantallas siguientes
       sessionStorage.setItem('import_meta', JSON.stringify({
-        entity:   'general',
+        entity:   selectedEntity,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         jobId:    job_id,
@@ -197,7 +206,7 @@ export default function ImportacionDeDatosPage() {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, router]);
+  }, [selectedFile, selectedEntity, router]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Render
@@ -227,14 +236,42 @@ export default function ImportacionDeDatosPage() {
           p-6 flex flex-col gap-5
         ">
 
-          {/* ── 1. Información ──────────────────────────────────────── */}
+          {/* ── 1. Selector de entidad ──────────────────────────────────────── */}
           <div>
-            <label className="block font-sans font-bold text-[13px] text-on-surface mb-2">
-              1. Seleccione el archivo a importar:
+            <label
+              htmlFor="select-entidad"
+              className="block font-sans font-bold text-[13px] text-on-surface mb-2"
+            >
+              1. Seleccione la entidad a importar:
             </label>
-            <p className="font-sans text-[12px] text-on-surface-variant mb-4">
-              El sistema identificará automáticamente si el archivo contiene datos de Docentes, Proyectos, Publicaciones, Tesis o Grupos de Investigación.
-            </p>
+
+            <div className="relative w-[260px]">
+              <select
+                id="select-entidad"
+                value={selectedEntity}
+                onChange={(e) => setSelectedEntity(e.target.value as ImportEntity)}
+                className="
+                  w-full appearance-none
+                  px-3 py-2 pr-9
+                  font-sans text-[13px] text-on-surface
+                  bg-surface-container-lowest
+                  border border-outline-variant rounded
+                  outline-none
+                  focus:ring-2 focus:ring-[#a8c8fa] focus:border-primary
+                  transition-all duration-100
+                  cursor-pointer
+                "
+                aria-label="Seleccionar entidad a importar"
+                disabled={isUploading}
+              >
+                {ENTITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                <ChevronDownIcon />
+              </span>
+            </div>
           </div>
 
           {/* ── 2. Zona Drag & Drop ─────────────────────────────────────────── */}

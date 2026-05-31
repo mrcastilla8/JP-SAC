@@ -39,20 +39,14 @@ async def update_configuracion(
     config_in: ConfiguracionGlobalUpdate,
     db: AsyncSession = Depends(get_db),
     # Solo el administrador puede modificar la configuración global
-    # TODO: Restaurar cuando se integre autenticación de usuarios
-    # current_user: dict = Depends(require_admin)
+    current_user: dict = Depends(require_admin)
 ) -> Any:
     """
     Actualizar un valor de configuración global (Solo Administradores).
     """
     config_obj = await configuracion.get_by_clave(db, clave=clave)
     if not config_obj:
-        from app.models.domain import ConfiguracionGlobal
-        new_config = ConfiguracionGlobal(clave=clave, valor=config_in.valor, descripcion=config_in.descripcion)
-        db.add(new_config)
-        await db.commit()
-        await db.refresh(new_config)
-        return new_config
+        raise HTTPException(status_code=404, detail="Configuración no encontrada")
         
     config_obj = await configuracion.update(db, db_obj=config_obj, obj_in=config_in)
     

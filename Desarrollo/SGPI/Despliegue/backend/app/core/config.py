@@ -3,7 +3,7 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SGPI - Sistema de Gestión de Producción Intelectual"
+    PROJECT_NAME: str = "SGPI - Sistema de Gestión de Proyectos de Investigación"
     VERSION: str = "1.0.0"
 
     # Entorno: "development" | "production"
@@ -78,9 +78,14 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # -------------------------------------------------------------------------
+    # Rate Limiting de conectores (segundos)
+    # -------------------------------------------------------------------------
+    RENACYT_RATE_LIMIT_SECONDS: float = 0.5
+
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8",
+        env_file_encoding="utf-8-sig",
         extra="ignore",
     )
 

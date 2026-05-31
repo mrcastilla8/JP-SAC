@@ -454,13 +454,7 @@ export default function ProyectosBandejaPage() {
                       return !isNaN(limite.getTime()) && limite < new Date();
                     });
 
-                    if (proy.fuente === 'Externo (VRIP)') {
-                      alertaElement = (
-                        <span className="inline-flex mt-1 text-[10px] font-sans font-semibold px-1.5 py-0.5 rounded bg-[#e0f2fe] text-[#0369a1] uppercase tracking-wider">
-                          Externo (VRIP)
-                        </span>
-                      );
-                    } else if (proy.fuente && (proy.fuente.toLowerCase().includes('ocr') || proy.fuente.toLowerCase().includes('extrac'))) {
+                    if (proy.fuente && (proy.fuente.toLowerCase().includes('ocr') || proy.fuente.toLowerCase().includes('extrac'))) {
                       alertaElement = (
                         <span className="inline-flex mt-1 text-[10px] font-sans font-medium px-1.5 py-0.5 rounded bg-[#f3e8ff] text-[#6b21a8] uppercase tracking-wider">
                           Extracción OCR (RR)
@@ -494,15 +488,7 @@ export default function ProyectosBandejaPage() {
                           {alertaElement}
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          {proy.fuente === 'Externo (VRIP)' ? (
-                            <button
-                              onClick={() => router.push(`/SGPI-CFPI/nuevo?importCode=${proy.code}`)}
-                              className="inline-flex items-center gap-1 border border-[#16a34a] text-[#16a34a] hover:bg-[#16a34a] hover:text-white font-sans font-bold text-[12px] px-3 py-1 rounded transition-colors cursor-pointer"
-                            >
-                              <PlusIcon />
-                              Importar
-                            </button>
-                          ) : isPendiente ? (
+                          {isPendiente ? (
                             <button
                               onClick={() => router.push(`/SGPI-CFPI/${proy.code}/validar`)}
                               className="inline-flex items-center gap-1 border border-[#001631] text-[#001631] hover:bg-[#001631] hover:text-white font-sans font-bold text-[12px] px-3 py-1 rounded transition-colors cursor-pointer"

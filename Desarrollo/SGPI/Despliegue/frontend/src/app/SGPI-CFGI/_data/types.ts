@@ -12,15 +12,9 @@ export type RolMiembro = 'Director' | 'Co-Investigador' | 'Colaborador' | 'Tesis
 export interface MiembroGrupo {
   dni: string;
   nombre: string;
-  nombres?: string;
-  apellidos?: string;
   rol: RolMiembro;
   fechaIncorporacion: string;
   estado: 'activo' | 'inactivo';
-  isExternal?: boolean;
-  nivelRenacyt?: string;
-  departamento?: string;
-  facultad?: string;
 }
 
 export interface ProyectoVinculado {
@@ -75,11 +69,7 @@ export interface StatsGrupos {
 export interface InvestigatorPadron {
   dni: string;
   nombre: string;
-  nombres?: string;
-  apellidos?: string;
   email: string;
   facultad: string;
   departamento: string;
-  isExternal?: boolean;
-  nivelRenacyt?: string;
 }

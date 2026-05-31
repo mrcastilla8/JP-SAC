@@ -118,6 +118,7 @@ export default function ImportResultsPage() {
       `SGPI — Log de Importación`,
       `Fecha        : ${now}`,
       `Archivo      : ${fileName}`,
+      `Entidad      : ${entity}`,
       `─────────────────────────────────────────`,
       `Total procesados : ${total}`,
       `  Nuevos         : ${nuevos}`,

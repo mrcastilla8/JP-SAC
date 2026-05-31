@@ -142,8 +142,7 @@ class SearchEngine:
                         "codigo_renacyt": inv.codigo_renacyt,
                         "investigador_sm": inv.investigador_sm,
                         "tiene_deuda_gi": inv.tiene_deuda_gi,
-                        "tiene_deuda_pi": inv.tiene_deuda_pi,
-                        "is_external": inv.is_external
+                        "tiene_deuda_pi": inv.tiene_deuda_pi
                     }
                 ))
 

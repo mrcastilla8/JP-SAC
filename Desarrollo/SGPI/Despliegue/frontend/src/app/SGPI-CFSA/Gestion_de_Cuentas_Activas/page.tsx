@@ -22,8 +22,7 @@ import { Button, Badge, Modal, Input, Select, Toast } from '@/SGPI-CFU/component
 import { canDo }                                    from '@/SGPI-CFU/lib/auth/permissions';
 import type { User }                                from '@/SGPI-CFU/lib/types/models';
 import type { UserRole }                            from '@/SGPI-CFU/lib/types/auth';
-import { ROLE_LABELS, ROLE_MAP }                    from '@/SGPI-CFU/lib/types/auth';
-import { capiacService }                            from '../_data/capiacService';
+import { ROLE_LABELS }                              from '@/SGPI-CFU/lib/types/auth';
 
 // ── Mock temporal de useAuth (sin backend) ───────────────────────────────────
 // TODO: reemplazar por useAuth real cuando el backend esté disponible
@@ -49,7 +48,26 @@ type Tab = 'cuentas' | 'parametros';
 // Datos mock (reemplazar por llamada a API cuando el endpoint exista)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// MOCK_USERS removed. Data now comes from API
+const MOCK_USERS: User[] = [
+  {
+    id:        '1',
+    email:     'jperez@unmsm.edu.pe',
+    name:      'Jorge Perez',
+    role:      'admin' as UserRole,
+    isActive:  true,
+    lastLogin: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id:        '2',
+    email:     'mlopez@unmsm.edu.pe',
+    name:      'Maria Lopez',
+    role:      'secretary' as UserRole,
+    isActive:  true,
+    lastLogin: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  },
+];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subcomponente: Toggle de estado
@@ -92,10 +110,10 @@ function Toggle({ checked, onChange, disabled = false, id }: ToggleProps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Subcomponente: Icono Ojo (ver)
+// Subcomponente: Icono Lápiz (editar)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function EyeIcon({ className = '' }: { className?: string }) {
+function PencilIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -109,8 +127,8 @@ function EyeIcon({ className = '' }: { className?: string }) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   );
 }
@@ -143,13 +161,9 @@ function PlusIcon() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const INITIAL_PARAMS = {
-  'scraping.vrip.url_base': '',
-  'scraping.cybertesis.url_base': '',
-  'scraping.frecuencia_horas': '',
-  'alertas.semaforo_rojo_dias': '',
-  'alertas.semaforo_amarillo_dias': '',
-  'carga_no_lectiva.maximo_horas_semanales': '',
-  'reportes.limite_filas_export': '',
+  frecuencia:     '12',
+  alertaRoja:     '3',
+  alertaAmarilla: '7',
 };
 
 type ParamKey = keyof typeof INITIAL_PARAMS;
@@ -170,34 +184,12 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
 
   // Último estado confirmado (tras "Aplicar Cambios" o estado inicial)
   const [savedParams, setSavedParams] = useState<ParamState>({ ...INITIAL_PARAMS });
-  
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const data = await capiacService.getConfiguraciones();
-        const newParams: ParamState = { ...INITIAL_PARAMS };
-        data.forEach(c => {
-          if (c.clave in newParams) {
-            newParams[c.clave as ParamKey] = String(c.valor);
-          }
-        });
-        setParams(newParams);
-        setSavedParams(newParams);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchConfig();
-  }, []);
 
   // Hay cambios pendientes si cualquier campo difiere del guardado
-  const hasChanges = Object.keys(params).some(
-    (key) => params[key as ParamKey] !== savedParams[key as ParamKey]
-  );
+  const hasChanges =
+    params.frecuencia     !== savedParams.frecuencia     ||
+    params.alertaRoja     !== savedParams.alertaRoja     ||
+    params.alertaAmarilla !== savedParams.alertaAmarilla;
 
   // Actualiza el campo correspondiente en el estado
   const handleChange = (key: ParamKey) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,26 +197,11 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
   };
 
   // Guardar cambios → persiste el estado y notifica al padre
-  const handleAplicar = async () => {
+  const handleAplicar = () => {
     if (!hasChanges) return;
-    try {
-      const promises = [];
-      for (const key of Object.keys(params) as ParamKey[]) {
-        if (params[key] !== savedParams[key]) {
-          // Si el valor debe ser número y no es URL
-          let valueToSave: any = params[key];
-          if (!key.includes('url_base') && !isNaN(Number(valueToSave)) && valueToSave !== '') {
-            valueToSave = Number(valueToSave);
-          }
-          promises.push(capiacService.updateConfiguracion(key, valueToSave));
-        }
-      }
-      await Promise.all(promises);
-      setSavedParams({ ...params });
-      onSaved();
-    } catch (err) {
-      console.error(err);
-    }
+    // TODO: llamar API cuando el backend esté disponible
+    setSavedParams({ ...params });
+    onSaved();
   };
 
   const SaveIcon = (
@@ -264,47 +241,33 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
         </Button>
       </div>
 
-      {/* ── Primera sección: Scraping ────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 mb-6">
-        <h3 className="font-sans font-bold text-[13px] text-[#0f172a]">
-          Módulo de Scraping (Convocatorias y Entregables)
-        </h3>
-        <div className="flex flex-wrap gap-6 mt-1">
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[280px]">
-            <label className="font-sans font-bold text-[12px] text-[#0f172a]">
-              URL Base VRIP
-            </label>
+      {/* ── Inputs primera sección ────────────────────────────────────────── */}
+      <div className="flex gap-8 mb-6">
+        {/* URL Base Scraping (solo lectura) */}
+        <div className="flex flex-col gap-1.5 flex-1 max-w-[340px]">
+          <label className="font-sans font-bold text-[12px] text-[#0f172a]">
+            URL Base Scraping (VRIP)
+          </label>
+          <Input
+            id="param-url-base"
+            defaultValue="https://vrip.unmsm.edu.pe/convocatorias"
+            disabled
+          />
+        </div>
+
+        {/* Frecuencia (editable → detecta cambios) */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="param-frecuencia" className="font-sans font-bold text-[12px] text-[#0f172a]">
+            Frecuencia de Sincronización
+          </label>
+          <div className="flex items-center gap-2">
             <Input
-              id="param-vrip-url"
-              value={params['scraping.vrip.url_base']}
-              onChange={handleChange('scraping.vrip.url_base')}
-              placeholder="https://vrip.unmsm.edu.pe"
+              id="param-frecuencia"
+              value={params.frecuencia}
+              onChange={handleChange('frecuencia')}
+              className="w-[60px] text-center"
             />
-          </div>
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[280px]">
-            <label className="font-sans font-bold text-[12px] text-[#0f172a]">
-              URL Base Cybertesis
-            </label>
-            <Input
-              id="param-cybertesis-url"
-              value={params['scraping.cybertesis.url_base']}
-              onChange={handleChange('scraping.cybertesis.url_base')}
-              placeholder="https://cybertesis.unmsm.edu.pe"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="param-frecuencia" className="font-sans font-bold text-[12px] text-[#0f172a]">
-              Frecuencia de Actualización
-            </label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="param-frecuencia"
-                value={params['scraping.frecuencia_horas']}
-                onChange={handleChange('scraping.frecuencia_horas')}
-                className="w-[60px] text-center"
-              />
-              <span className="font-sans text-[13px] text-[#64748b]">Horas</span>
-            </div>
+            <span className="font-sans text-[13px] text-[#64748b]">Horas</span>
           </div>
         </div>
       </div>
@@ -312,12 +275,13 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
       <hr className="border-[#e2e8f0] mb-6" />
 
       {/* ── Segunda sección: Alertas ──────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 mb-6">
+      <div className="flex flex-col gap-3">
         <h3 className="font-sans font-bold text-[13px] text-[#0f172a]">
           Umbrales de Semaforización (Alertas)
         </h3>
 
         <div className="flex gap-6 mt-1">
+          {/* Alerta Roja (editable → detecta cambios) */}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="param-alerta-roja"
@@ -328,12 +292,13 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
             <input
               id="param-alerta-roja"
               type="text"
-              value={params['alertas.semaforo_rojo_dias']}
-              onChange={handleChange('alertas.semaforo_rojo_dias')}
+              value={params.alertaRoja}
+              onChange={handleChange('alertaRoja')}
               className="w-40 px-3 py-1.5 font-sans font-medium text-[13px] text-[#dc2626] bg-white border border-[#fca5a5] rounded outline-none focus:ring-2 focus:ring-[#fecaca] transition-all"
             />
           </div>
 
+          {/* Alerta Amarilla (editable → detecta cambios) */}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="param-alerta-amarilla"
@@ -344,50 +309,9 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
             <input
               id="param-alerta-amarilla"
               type="text"
-              value={params['alertas.semaforo_amarillo_dias']}
-              onChange={handleChange('alertas.semaforo_amarillo_dias')}
+              value={params.alertaAmarilla}
+              onChange={handleChange('alertaAmarilla')}
               className="w-40 px-3 py-1.5 font-sans font-medium text-[13px] text-[#d97706] bg-white border border-[#fcd34d] rounded outline-none focus:ring-2 focus:ring-[#fde68a] transition-all"
-            />
-          </div>
-        </div>
-      </div>
-
-      <hr className="border-[#e2e8f0] mb-6" />
-
-      {/* ── Tercera sección: Reglas y Reportes ──────────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
-        <h3 className="font-sans font-bold text-[13px] text-[#0f172a]">
-          Configuraciones Adicionales
-        </h3>
-
-        <div className="flex gap-6 mt-1">
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="param-max-horas"
-              className="font-sans font-bold text-[11px] text-[#0f172a]"
-            >
-              Límite Máx. Horas Semanales (Carga no Lectiva)
-            </label>
-            <Input
-              id="param-max-horas"
-              value={params['carga_no_lectiva.maximo_horas_semanales']}
-              onChange={handleChange('carga_no_lectiva.maximo_horas_semanales')}
-              className="w-40"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="param-limite-export"
-              className="font-sans font-bold text-[11px] text-[#0f172a]"
-            >
-              Límite Filas Exportación
-            </label>
-            <Input
-              id="param-limite-export"
-              value={params['reportes.limite_filas_export']}
-              onChange={handleChange('reportes.limite_filas_export')}
-              className="w-40"
             />
           </div>
         </div>
@@ -404,40 +328,11 @@ function ParametrosOperacion({ onSaved }: ParametrosOperacionProps) {
 export default function GestionDeCuentasActivasPage() {
   const { user }         = useMockAuth();
   const [activeTab, setActiveTab] = useState<Tab>('cuentas');
-  const [users, setUsers]         = useState<User[]>([]);
+  const [users, setUsers]         = useState<User[]>(MOCK_USERS);
   const [errorMsg, setErrorMsg]   = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen]     = useState(false);
-  const [selectedUser, setSelectedUser]           = useState<User | null>(null);
   const [newUserNombre, setNewUserNombre] = useState('');
   const [newUserEmail,  setNewUserEmail]  = useState('');
-  const [newUserRole, setNewUserRole] = useState<string>('Consulta');
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
-  // Cargar usuarios
-  const fetchUsers = useCallback(async () => {
-    try {
-      setIsLoadingUsers(true);
-      const data = await capiacService.getUsuarios();
-      const mappedUsers: User[] = data.map(u => ({
-        id: u.id_usuario,
-        email: u.correo_institucional,
-        name: u.correo_institucional.split('@')[0], // Placeholder para el nombre
-        role: ROLE_MAP[u.rol_sistema] || 'readonly',
-        isActive: u.estado_cuenta,
-        createdAt: u.created_at
-      }));
-      setUsers(mappedUsers);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al cargar usuarios');
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
 
   // Resetea los campos al cerrar el modal
   const handleCloseModal = useCallback(() => {
@@ -478,21 +373,15 @@ export default function GestionDeCuentasActivasPage() {
   const puedeGestionar = user ? canDo(user.role, 'MANAGE_USERS') : false;
 
   // ── Cambiar estado activo de un usuario ──────────────────────────────────
-  const handleToggleActivo = useCallback(async (userId: string, nuevoEstado: boolean) => {
+  const handleToggleActivo = useCallback((userId: string, nuevoEstado: boolean) => {
     if (!puedeGestionar) {
       setErrorMsg('No tienes permisos para cambiar el estado de una cuenta.');
       return;
     }
-    try {
-      await capiacService.toggleEstadoUsuario(userId, nuevoEstado);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, isActive: nuevoEstado } : u))
-      );
-      showToast('Estado actualizado exitosamente');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al cambiar el estado del usuario');
-    }
-  }, [puedeGestionar, showToast]);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, isActive: nuevoEstado } : u))
+    );
+  }, [puedeGestionar]);
 
   // ── Acción "Crear Nuevo Usuario" (stub) ─────────────────────────────────
   const handleCrearUsuario = useCallback(() => {
@@ -503,11 +392,15 @@ export default function GestionDeCuentasActivasPage() {
     setIsCreateModalOpen(true);
   }, [puedeGestionar]);
 
-  // ── Acción "Ver detalles usuario" ───────────────────────────────────────
-  const handleVer = useCallback((user: User) => {
-    setSelectedUser(user);
-    setIsViewModalOpen(true);
-  }, []);
+  // ── Acción "Editar usuario" (stub) ───────────────────────────────────────
+  const handleEditar = useCallback((userId: string) => {
+    if (!puedeGestionar) {
+      setErrorMsg('No tienes permisos para editar usuarios.');
+      return;
+    }
+    // TODO: abrir modal de edición
+    alert(`Próximamente: Editar usuario con ID ${userId}.`);
+  }, [puedeGestionar]);
 
   // Limpiar error tras 5 s
   useEffect(() => {
@@ -707,7 +600,7 @@ export default function GestionDeCuentasActivasPage() {
                         colSpan={5}
                         className="px-5 py-10 text-center font-sans text-body-md text-on-surface-variant"
                       >
-                        {isLoadingUsers ? 'Cargando usuarios...' : 'No hay usuarios registrados en el sistema.'}
+                        No hay usuarios registrados en el sistema.
                       </td>
                     </tr>
                   ) : (
@@ -765,23 +658,29 @@ export default function GestionDeCuentasActivasPage() {
 
                         {/* Acciones */}
                         <td className="px-5 py-3 text-right">
-                          <button
-                            id={`btn-ver-${u.id}`}
-                            onClick={() => handleVer(u)}
-                            title={`Ver detalles del usuario ${u.name}`}
-                            aria-label={`Ver detalles del usuario ${u.name}`}
-                            className="
-                              inline-flex items-center justify-center
-                              w-7 h-7 rounded
-                              text-on-surface-variant
-                              hover:bg-surface-container hover:text-primary
-                              active:bg-surface-container-high
-                              transition-colors duration-100
-                              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a8c8fa]
-                            "
-                          >
-                            <EyeIcon />
-                          </button>
+                          {puedeGestionar ? (
+                            <button
+                              id={`btn-editar-${u.id}`}
+                              onClick={() => handleEditar(u.id)}
+                              title={`Editar usuario ${u.name}`}
+                              aria-label={`Editar usuario ${u.name}`}
+                              className="
+                                inline-flex items-center justify-center
+                                w-7 h-7 rounded
+                                text-on-surface-variant
+                                hover:bg-surface-container hover:text-primary
+                                active:bg-surface-container-high
+                                transition-colors duration-100
+                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a8c8fa]
+                              "
+                            >
+                              <PencilIcon />
+                            </button>
+                          ) : (
+                            <span className="text-on-surface-variant/30 text-[12px] font-sans select-none">
+                              —
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -820,19 +719,10 @@ export default function GestionDeCuentasActivasPage() {
             <Button
               variant={canGuardarUsuario ? 'primary' : 'secondary'}
               disabled={!canGuardarUsuario}
-              onClick={async () => {
-                try {
-                  await capiacService.createUsuario({
-                    correo_institucional: newUserEmail,
-                    rol_sistema: newUserRole,
-                    estado_cuenta: true
-                  });
-                  handleCloseModal();
-                  handleUsuarioCreado();
-                  fetchUsers(); // Recargar la lista
-                } catch (err: any) {
-                  setErrorMsg(err.message || 'Error al crear usuario');
-                }
+              onClick={() => {
+                // TODO: lógica para guardar el usuario (llamar API)
+                handleCloseModal();
+                handleUsuarioCreado();
               }}
             >
               Guardar Usuario
@@ -869,55 +759,14 @@ export default function GestionDeCuentasActivasPage() {
             <label htmlFor="rol" className="font-sans font-bold text-[13px] text-[#0f172a]">
               Asignar Rol
             </label>
-            <Select id="rol" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)}>
-              <option value="Administrador">Administrador</option>
-              <option value="Secretaria">Secretaria</option>
-              <option value="Jefe">Jefe del Instituto</option>
-              <option value="Consulta">Consulta</option>
+            <Select id="rol" placeholder="Seleccionar rol...">
+              <option value="admin">Administrador</option>
+              <option value="secretary">Secretaria</option>
+              <option value="chief">Jefe del Instituto</option>
+              <option value="guest">Consulta</option>
             </Select>
           </div>
         </div>
-      </Modal>
-
-      {/* ── Modal: Ver Detalles del Usuario ───────────────────────────────── */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title="Detalles del Usuario"
-        footer={
-          <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>
-            Cerrar
-          </Button>
-        }
-      >
-        {selectedUser && (
-          <div className="flex flex-col gap-4 font-sans text-[13px] text-[#0f172a]">
-            <div className="flex flex-col border-b border-outline-variant pb-3">
-              <span className="font-bold text-[#64748b] text-[11px] uppercase tracking-wider mb-1">ID de Usuario</span>
-              <span className="font-mono text-[12px]">{selectedUser.id}</span>
-            </div>
-            <div className="flex flex-col border-b border-outline-variant pb-3">
-              <span className="font-bold text-[#64748b] text-[11px] uppercase tracking-wider mb-1">Nombre Completo</span>
-              <span>{selectedUser.name}</span>
-            </div>
-            <div className="flex flex-col border-b border-outline-variant pb-3">
-              <span className="font-bold text-[#64748b] text-[11px] uppercase tracking-wider mb-1">Correo Institucional</span>
-              <span>{selectedUser.email}</span>
-            </div>
-            <div className="flex flex-col border-b border-outline-variant pb-3">
-              <span className="font-bold text-[#64748b] text-[11px] uppercase tracking-wider mb-1">Rol Asignado</span>
-              <span>{ROLE_LABELS[selectedUser.role]}</span>
-            </div>
-            <div className="flex flex-col border-b border-outline-variant pb-3">
-              <span className="font-bold text-[#64748b] text-[11px] uppercase tracking-wider mb-1">Estado de Cuenta</span>
-              <span>{selectedUser.isActive ? 'Activa' : 'Desactivada'}</span>
-            </div>
-            <div className="flex flex-col pb-1">
-              <span className="font-bold text-[#64748b] text-[11px] uppercase tracking-wider mb-1">Fecha de Creación</span>
-              <span>{new Date(selectedUser.createdAt).toLocaleString('es-PE')}</span>
-            </div>
-          </div>
-        )}
       </Modal>
 
 

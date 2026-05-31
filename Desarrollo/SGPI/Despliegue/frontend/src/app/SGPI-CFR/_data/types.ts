@@ -14,10 +14,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type TipoReporte =
-  | 'actividades'          // Reporte de Actividades (Carga No Lectiva)
-  | 'proyectosActivos'     // Proyectos Activos
-  | 'produccionCientifica' // Producción Científica
-  | 'baseDatosPOI';        // Base de Datos para POI
+  | 'actividades'        // Reporte de Actividades (Carga No Lectiva)
+  | 'proyectosActivos'   // Proyectos Activos
+  | 'baseDatosPOI';      // Base de Datos para POI
 
 export type CortesPOI = 'abril' | 'agosto' | 'noviembre';
 
@@ -70,8 +69,6 @@ export interface ReporteResult {
   totalDocentes:           number;
   proyectosActivos:        number;
   promedioCargaNoLectiva:  number;   // en horas
-  totalPublicaciones?:     number;
-  totalTesis?:             number;
 
   /** Datos tabulares */
   registros:               RegistroDocente[];

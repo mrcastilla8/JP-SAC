@@ -51,7 +51,6 @@ export interface Proyecto {
   miembros: MiembroProyecto[];
   hitos: HitoProyecto[];
   historial: HistorialProyecto[];
-  is_external?: boolean;
 }
 
 export interface FiltrosProyectos {

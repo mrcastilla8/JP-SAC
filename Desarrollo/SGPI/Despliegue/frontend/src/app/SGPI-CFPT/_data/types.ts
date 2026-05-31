@@ -56,16 +56,10 @@ export interface InvestigadorResumen {
   grupo?:       string;   // Grupo de investigación al que pertenece
 }
 
+/** Investigador vinculado a una producción con su rol */
 export interface InvestigadorVinculado {
   investigador: InvestigadorResumen;
   rol:          RolPublicacion;
-}
-
-export interface GrupoInvestigacionResumen {
-  id:       number;
-  nombre:   string;
-  siglas?:  string;
-  facultad?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,9 +91,6 @@ export interface RegistroProduccion {
   // Investigadores vinculados (con rol)
   investigadoresVinculados: InvestigadorVinculado[];
 
-  // Grupo vinculado (para articulos)
-  grupoVinculado?:         GrupoInvestigacionResumen;
-
   // Metadatos comunes de auditoría
   importadoEn?:            string;        // ISO datetime
   confirmadoPor?:          string;
@@ -123,12 +114,10 @@ export interface FiltrosProduccion {
 
 export interface ConfirmarPayload {
   id:                      string;
-  tipo:                    TipoProduccion;
   doi?:                    string;
   issn?:                   string;
   volNum?:                 string;
   revista?:                string;
   cuartil?:                Cuartil;
-  id_grupo?:               number;
   investigadoresVinculados: { investigadorId: string; rol: RolPublicacion }[];
 }
