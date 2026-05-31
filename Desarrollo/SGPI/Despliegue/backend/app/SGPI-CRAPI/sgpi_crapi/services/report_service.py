@@ -164,7 +164,7 @@ async def generate_active_projects_report(db: AsyncSession, params: ReportParams
     stmt = select(Proyecto).where(Proyecto.estado_proyecto.in_(['Aprobado', 'En ejecución']))
     
     if params.grupo_investigacion:
-        stmt = stmt.join(GrupoInvestigacion, Proyecto.id_grupo == GrupoInvestigacion.id_grupo).where(GrupoInvestigacion.codigo_grupo == params.grupo_investigacion)
+        stmt = stmt.join(GrupoInvestigacion, Proyecto.id_grupo == GrupoInvestigacion.id_grupo).where(GrupoInvestigacion.nombre_grupo == params.grupo_investigacion)
     
     if params.departamento_academico:
         subq = select(InvestigadorProyecto.codigo_proyecto).join(
@@ -238,7 +238,7 @@ async def generate_scientific_production_report(db: AsyncSession, params: Report
             stmt_pub = stmt_pub.where(Publicacion.fecha_publicacion <= params.fecha_fin_hasta)
             
     if params.grupo_investigacion:
-        stmt_pub = stmt_pub.where(Publicacion.codigo_grupo == params.grupo_investigacion)
+        stmt_pub = stmt_pub.join(GrupoInvestigacion, Publicacion.id_grupo == GrupoInvestigacion.id_grupo).where(GrupoInvestigacion.nombre_grupo == params.grupo_investigacion)
         
     if params.departamento_academico:
         subq = select(InvestigadorPublicacion.id_publicacion).join(
