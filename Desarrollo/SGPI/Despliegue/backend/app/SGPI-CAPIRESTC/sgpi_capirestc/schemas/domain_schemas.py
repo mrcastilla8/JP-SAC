@@ -150,6 +150,7 @@ class ProyectoEstadoUpdate(BaseModel):
 class ProyectoResponse(ProyectoBase):
     created_at: datetime
     updated_at: datetime
+    is_external: Optional[bool] = False
     
     class Config:
         from_attributes = True

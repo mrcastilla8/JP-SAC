@@ -61,7 +61,8 @@ function mapToProyecto(p: any): Proyecto {
     responsablePrincipal,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
-    fuente: p.presupuesto_asignado > 0 ? 'RAIS' : 'Manual',
+    fuente: p.is_external ? 'Externo (VRIP)' : (p.presupuesto_asignado > 0 ? 'RAIS' : 'Manual'),
+    is_external: !!p.is_external,
     miembros: (p.investigador_proyecto || []).map((ip: any) => {
       let rol: RolMiembroProyecto = 'Colaborador';
       if (ip.condicion_rol === 'Responsable') rol = 'Responsable Principal';
@@ -373,6 +374,47 @@ export async function completarHito(
     estado_entregable: 'Completado',
     fecha_entrega_real: new Date().toISOString().split('T')[0],
   });
+
+  const proyAct = await getProyectoById(proyectoId);
+  if (!proyAct) throw new Error('No se pudo recuperar el proyecto actualizado.');
+  return proyAct;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Verificar hito con conector Cybertesis (DSpace 7)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function verificarHitoConCybertesis(
+  proyectoId: string,
+  hitoId: string,
+  thesisData?: { thesis_url?: string; titulo_tesis?: string; autor_texto?: string; anio_publicacion?: number; resumen?: string }
+): Promise<Proyecto> {
+  let id_entregable: number | null = null;
+
+  if (/^\d+$/.test(hitoId)) {
+    id_entregable = Number(hitoId);
+  } else {
+    const isFirstHito = hitoId.endsWith('-1') || hitoId === 'hito-1';
+    try {
+      const p = await apiClient.get<any>(`/projects/${proyectoId}`);
+      if (p && p.entregable && p.entregable.length > 0) {
+        const sorted = [...p.entregable].sort((a: any, b: any) => a.id_entregable - b.id_entregable);
+        if (isFirstHito) {
+          id_entregable = sorted[0].id_entregable;
+        } else if (sorted.length > 1) {
+          id_entregable = sorted[1].id_entregable;
+        }
+      }
+    } catch (err) {
+      console.error('Error recuperando entregables para hito mock:', err);
+    }
+  }
+
+  if (id_entregable === null) throw new Error('Hito no encontrado.');
+
+  await apiClient.post<any>(
+    `/projects/${proyectoId}/deliverables/${id_entregable}/verify-cybertesis`,
+    thesisData || {}
+  );
 
   const proyAct = await getProyectoById(proyectoId);
   if (!proyAct) throw new Error('No se pudo recuperar el proyecto actualizado.');
