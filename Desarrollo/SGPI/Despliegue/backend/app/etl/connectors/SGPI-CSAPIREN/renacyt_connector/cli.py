@@ -4,6 +4,7 @@ import json
 import csv
 import io
 import logging
+import asyncio
 from renacyt_connector.api import RenacytConnector, RenacytError
 
 def configure_logging(verbose):
@@ -52,6 +53,7 @@ def main():
     group.add_argument('-o', '--orcid', type=str, help="Query researcher by ORCID identifier (exact match).")
     group.add_argument('-c', '--code', type=str, help="Query researcher by RENACYT registration code (exact match).")
     group.add_argument('-n', '--name', type=str, help="Query researchers by full/partial name (ilike match).")
+    group.add_argument('-a', '--lastname', type=str, help="Query researchers by last name (ilike match).")
     group.add_argument('-i', '--institution', type=str, help="Query researchers by self-declared CTI VITAE main institution (ilike match).")
     
     # Pagination
@@ -83,37 +85,47 @@ def main():
         max_retries=3
     )
     
-    try:
+    async def run_query():
         results = None
         
         # 1. Query by unique DNI
         if args.dni:
             logging.info(f"Querying by DNI: {args.dni}")
-            record = connector.search_by_dni(args.dni, normalize=True)
+            record = await connector.search_by_dni(args.dni, normalize=True)
             results = {"total": 1 if record else 0, "data": [record] if record else []}
             
         # 2. Query by unique ORCID
         elif args.orcid:
             logging.info(f"Querying by ORCID: {args.orcid}")
-            record = connector.search_by_orcid(args.orcid, normalize=True)
+            record = await connector.search_by_orcid(args.orcid, normalize=True)
             results = {"total": 1 if record else 0, "data": [record] if record else []}
             
         # 3. Query by unique registration code
         elif args.code:
             logging.info(f"Querying by Code: {args.code}")
-            record = connector.search_by_codigo(args.code, normalize=True)
+            record = await connector.search_by_codigo(args.code, normalize=True)
             results = {"total": 1 if record else 0, "data": [record] if record else []}
             
         # 4. Query by Name (returns search list)
         elif args.name:
             logging.info(f"Querying by Name: '{args.name}' (Page: {args.page}, Limit: {args.limit})")
-            results = connector.search_by_name(args.name, page=args.page, page_size=args.limit, normalize=True)
+            results = await connector.search_by_name(args.name, page=args.page, page_size=args.limit, normalize=True)
             
-        # 5. Query by Institution (returns search list)
+        # 5. Query by Last Name (returns search list)
+        elif args.lastname:
+            logging.info(f"Querying by Last Name: '{args.lastname}' (Page: {args.page}, Limit: {args.limit})")
+            results = await connector.search_by_lastname(args.lastname, page=args.page, page_size=args.limit, normalize=True)
+            
+        # 6. Query by Institution (returns search list)
         elif args.institution:
             logging.info(f"Querying by Institution: '{args.institution}' (Page: {args.page}, Limit: {args.limit})")
-            results = connector.search_by_institution(args.institution, page=args.page, page_size=args.limit, normalize=True)
+            results = await connector.search_by_institution(args.institution, page=args.page, page_size=args.limit, normalize=True)
             
+        return results
+
+    try:
+        results = asyncio.run(run_query())
+        
         if results is None:
             print("Error: No search filter triggered.", file=sys.stderr)
             sys.exit(1)
