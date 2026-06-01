@@ -137,10 +137,10 @@ async function request<T>(
 
     clearTimeout(timeoutId);
 
-    // Parsear la respuesta JSON estándar del backend
-    let json: ApiResponse<T>;
+    // Parsear la respuesta JSON del backend
+    let json: any;
     try {
-      json = await response.json() as ApiResponse<T>;
+      json = await response.json();
     } catch {
       // El servidor devolvió algo que no es JSON (ej: error de red o proxy)
       throw new ApiClientError(
@@ -154,14 +154,19 @@ async function request<T>(
       );
     }
 
-    // Manejar respuestas de error del backend
-    if (!json.success) {
-      const apiError = json as ApiError;
+    // Manejar respuestas de error del backend (status no-2xx)
+    if (!response.ok) {
+      // Intentar extraer el detalle del error (FastAPI usa { "detail": "..." })
+      const errorMsg = json?.detail || json?.error || 'Error en el servidor.';
+      const errorCode = json?.code || 'SERVER_ERROR';
 
       // 401 → Token inválido o expirado → limpiar sesión y redirigir
       if (response.status === 401) {
         clearAllSessionData();
         globalCallbacks.onUnauthorized?.();
+        // Devolver una promesa que nunca se resuelve para evitar que
+        // la aplicación React lance un Unhandled Runtime Error mientras el router redirige.
+        return new Promise(() => {}) as Promise<T>;
       }
 
       // 403 → Sin permisos para la acción
@@ -169,10 +174,28 @@ async function request<T>(
         globalCallbacks.onForbidden?.();
       }
 
-      throw new ApiClientError(apiError, response.status);
+      throw new ApiClientError(
+        {
+          success:   false,
+          error:     typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
+          code:      errorCode,
+          timestamp: json?.timestamp || new Date().toISOString(),
+        },
+        response.status
+      );
     }
 
-    return (json as ApiSuccess<T>).data;
+    // Si la respuesta es exitosa (2xx)
+    // Caso A: Formato antiguo/Express { success: true, data: ... }
+    if (json && typeof json === 'object' && 'success' in json) {
+      if (!json.success) {
+        throw new ApiClientError(json as ApiError, response.status);
+      }
+      return json.data;
+    }
+
+    // Caso B: Formato nuevo/FastAPI direct payload
+    return json as T;
 
   } catch (error) {
     clearTimeout(timeoutId);
@@ -307,9 +330,9 @@ export const apiClient = {
 
       clearTimeout(timeoutId);
 
-      let json: ApiResponse<T>;
+      let json: any;
       try {
-        json = await response.json() as ApiResponse<T>;
+        json = await response.json();
       } catch {
         throw new ApiClientError(
           {
@@ -322,17 +345,44 @@ export const apiClient = {
         );
       }
 
-      if (!json.success) {
-        const apiError = json as ApiError;
+      // Manejar respuestas de error del backend (status no-2xx)
+      if (!response.ok) {
+        const errorMsg = json?.detail || json?.error || 'Error al procesar la subida.';
+        const errorCode = json?.code || 'SERVER_ERROR';
+
         if (response.status === 401) {
           clearAllSessionData();
           globalCallbacks.onUnauthorized?.();
+          // Devolver una promesa que nunca se resuelve para evitar que
+          // la aplicación React lance un Unhandled Runtime Error mientras el router redirige.
+          return new Promise(() => {}) as Promise<T>;
         }
-        if (response.status === 403) globalCallbacks.onForbidden?.();
-        throw new ApiClientError(apiError, response.status);
+        if (response.status === 403) {
+          globalCallbacks.onForbidden?.();
+        }
+
+        throw new ApiClientError(
+          {
+            success:   false,
+            error:     typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
+            code:      errorCode,
+            timestamp: json?.timestamp || new Date().toISOString(),
+          },
+          response.status
+        );
       }
 
-      return (json as ApiSuccess<T>).data;
+      // Si la respuesta es exitosa (2xx)
+      // Caso A: Formato antiguo/Express { success: true, data: ... }
+      if (json && typeof json === 'object' && 'success' in json) {
+        if (!json.success) {
+          throw new ApiClientError(json as ApiError, response.status);
+        }
+        return json.data;
+      }
+
+      // Caso B: Formato nuevo/FastAPI direct payload
+      return json as T;
 
     } catch (error) {
       clearTimeout(timeoutId);

@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Boolean, Integer, DateTime, Text, Foreign
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
+import uuid
 
 Base = declarative_base()
 
@@ -34,6 +35,7 @@ class Investigador(Base):
     estado_vigencia = Column(String(20), nullable=False, default='Activo')
     tiene_deuda_gi = Column(Boolean, default=False)
     tiene_deuda_pi = Column(Boolean, default=False)
+    is_external = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -100,7 +102,7 @@ class Entregable(Base):
 
 class LogAuditoria(Base):
     __tablename__ = 'log_auditoria'
-    id_log = Column(UUID(as_uuid=True), primary_key=True)
+    id_log = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tipo_evento = Column(String(50), nullable=False)
     entidad_afectada = Column(String(100))
     pk_entidad = Column(String(100))
@@ -150,6 +152,8 @@ class Publicacion(Base):
     fecha_publicacion = Column(Date)
     url_documento = Column(String(255))
     id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='SET NULL'))
+    estado_validacion = Column(String(50), default='Pendiente')
+    fuente_origen = Column(String(50), default='MANUAL')
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class InvestigadorPublicacion(Base):
@@ -187,6 +191,8 @@ class Tesis(Base):
     pais_publicacion = Column(String(10))
     palabras_clave = Column(JSON)
     jurados_evaluadores = Column(JSON)
+    estado_validacion = Column(String(50), default='Pendiente')
+    fuente_origen = Column(String(50), default='CYBERTESIS')
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class ProyectoEstadoHistorial(Base):

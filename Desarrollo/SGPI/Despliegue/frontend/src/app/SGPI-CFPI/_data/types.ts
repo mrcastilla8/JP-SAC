@@ -51,6 +51,7 @@ export interface Proyecto {
   miembros: MiembroProyecto[];
   hitos: HitoProyecto[];
   historial: HistorialProyecto[];
+  is_external?: boolean;
 }
 
 export interface FiltrosProyectos {
@@ -82,3 +83,10 @@ export interface StatsProyectos {
   enEjecucion: number;
   concluidos: number;
 }
+
+export interface Convocatoria {
+  id_convocatoria: number;
+  titulo_convocatoria: string;
+  estado_convocatoria: string;
+}
+
