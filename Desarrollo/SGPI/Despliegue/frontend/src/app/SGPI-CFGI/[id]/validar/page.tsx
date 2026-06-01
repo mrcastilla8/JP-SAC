@@ -2,16 +2,16 @@
 
 /**
  * @file [id]/validar/page.tsx
- * @route /grupos/[id]/validar
+ * @route /SGPI-CFGI/[id]/validar
  * @description Curación de Datos — Tabs: Datos Maestros / Gestión de Miembros
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
-import { Button } from '@/SGPI-CFU/components/ui';
 import type { GrupoInvestigacion, MiembroGrupo, RolMiembro, InvestigatorPadron, EstadoGrupo } from '../../_data/types';
-import { getGrupoById, buscarInvestigadores, validarGrupo, getLineasInvestigacion } from '../../_data/service';
+import { getGrupoById, buscarInvestigadores, validarGrupo } from '../../_data/service';
+import { LINEAS_INVESTIGACION } from '../../_data/mock';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Íconos SVG
@@ -68,14 +68,6 @@ const CalendarIcon = () => (
   </svg>
 );
 
-const ClearIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/>
-    <line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
-
 const CheckCircleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -91,7 +83,7 @@ const SpinnerIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
+const ClearIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
@@ -108,29 +100,12 @@ export default function CuracionGrupoPage() {
   const [activeTab, setActiveTab] = useState<'datos-maestros' | 'miembros'>('datos-maestros');
   const [grupo,     setGrupo]     = useState<GrupoInvestigacion | null>(null);
   const [cargando,  setCargando]  = useState(true);
-  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   // Form — Datos Maestros
   const [name,            setName]            = useState('');
-  const [lineas,          setLineas]          = useState<string[]>([]);
   const [selectedLine,    setSelectedLine]    = useState('');
   const [status,          setStatus]          = useState<EstadoGrupo>('validado_activo');
   const [recognitionDate, setRecognitionDate] = useState('');
-
-  // Cargar líneas de investigación reales desde configuracion_global
-  useEffect(() => {
-    async function loadLineas() {
-      try {
-        const data = await getLineasInvestigacion();
-        if (data && data.length > 0) {
-          setLineas(data);
-        }
-      } catch (err) {
-        console.error("Error cargando líneas de investigación:", err);
-      }
-    }
-    loadLineas();
-  }, []);
 
   // Form — Miembros
   const [miembros,           setMiembros]           = useState<MiembroGrupo[]>([]);
@@ -145,32 +120,27 @@ export default function CuracionGrupoPage() {
   const [showToast,    setShowToast]    = useState(false);
 
   // Carga inicial
-  const cargarDatos = useCallback(async () => {
-    setCargando(true);
-    setErrorCarga(null);
-    try {
-      const data = await getGrupoById(id);
-      if (data) {
-        setGrupo(data);
-        setName(data.name);
-        setSelectedLine(data.researchLines[0] || '');
-        setStatus(data.status);
-        setRecognitionDate(data.recognitionDate || '');
-        setMiembros(data.miembros || []);
-      } else {
-        setErrorCarga('El grupo no existe o no se pudieron cargar sus datos.');
-      }
-    } catch (err: any) {
-      console.error(err);
-      setErrorCarga(err?.message || 'Error al conectar con el servidor. Por favor, intente de nuevo.');
-    } finally {
-      setCargando(false);
-    }
-  }, [id]);
-
   useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+    async function cargar() {
+      setCargando(true);
+      try {
+        const data = await getGrupoById(id);
+        if (data) {
+          setGrupo(data);
+          setName(data.name);
+          setSelectedLine(data.researchLines[0] || LINEAS_INVESTIGACION[0]);
+          setStatus(data.status);
+          setRecognitionDate(data.recognitionDate || '');
+          setMiembros(data.miembros || []);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setCargando(false);
+      }
+    }
+    cargar();
+  }, [id]);
 
   // Detector de anomalías en el nombre
   const isNameAnomalous = useCallback(() => {
@@ -257,7 +227,8 @@ export default function CuracionGrupoPage() {
     setGuardando(true);
     try {
       await validarGrupo(id, { name, researchLines: [selectedLine], status, recognitionDate: recognitionDate || undefined, miembros });
-      router.push(`/grupos/${id}/ficha?validated=true`);
+      setShowToast(true);
+      setTimeout(() => { router.push(`/SGPI-CFGI/${id}/ficha`); }, 2000);
     } catch (err: any) {
       setErrors([err.message || 'Error al guardar.']);
       setGuardando(false);
@@ -275,41 +246,12 @@ export default function CuracionGrupoPage() {
     );
   }
 
-  if (errorCarga) {
-    return (
-      <MainLayout title="Curación de Datos" subtitle="Curación de información del grupo de investigación">
-        <div className="max-w-[600px] mx-auto bg-red-50 text-red-800 p-6 rounded border border-red-200 flex flex-col gap-4 font-sans shadow-level-1">
-          <div>
-            <h3 className="font-bold text-[15px]">Error al cargar datos del grupo</h3>
-            <p className="mt-1 text-[13px] text-red-700">{errorCarga}</p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={cargarDatos}
-            >
-              Reintentar conexión
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => router.push('/grupos')}
-            >
-              Volver a la bandeja
-            </Button>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
   if (!grupo) {
     return (
       <MainLayout title="Curación de Datos" subtitle="">
-        <div className="bg-red-50 text-red-800 p-6 rounded border border-red-200 shadow-level-1">
-          <p className="font-sans font-bold">Grupo no encontrado o inexistente.</p>
-          <button onClick={() => router.push('/grupos')} className="mt-3 text-[13px] font-bold text-red-700 underline cursor-pointer">
+        <div className="bg-red-50 text-red-800 p-6 rounded border border-red-200">
+          <p className="font-sans font-bold">Grupo no encontrado.</p>
+          <button onClick={() => router.push('/SGPI-CFGI')} className="mt-3 text-[13px] font-bold text-red-700 underline cursor-pointer">
             Volver a la bandeja
           </button>
         </div>
@@ -330,7 +272,7 @@ export default function CuracionGrupoPage() {
           <div>
             {/* Back link */}
             <button
-              onClick={() => router.push('/grupos')}
+              onClick={() => router.push('/SGPI-CFGI')}
               className="inline-flex items-center gap-1 text-[13px] font-sans text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer mb-2"
             >
               <BackIcon />
@@ -353,22 +295,22 @@ export default function CuracionGrupoPage() {
 
           {/* Derecha — Cancelar + Guardar y Validar */}
           <div className="flex gap-2 flex-shrink-0 ml-4">
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => router.push('/grupos')}
+            <button
+              type="button"
+              onClick={() => router.push('/SGPI-CFGI')}
+              className="border border-[#e2e8f0] hover:bg-slate-50 font-sans text-[13px] text-[#475569] px-4 py-2 rounded transition-colors cursor-pointer"
             >
               Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
+            </button>
+            <button
+              type="button"
               onClick={handleGuardar}
-              loading={guardando}
-              iconLeft={<CheckIcon />}
+              disabled={guardando}
+              className="flex items-center gap-2 bg-[#001631] hover:bg-[#002b54] text-white font-sans font-bold text-[13px] px-4 py-2 rounded shadow transition-colors cursor-pointer disabled:opacity-60"
             >
-              Guardar y Validar
-            </Button>
+              <CheckIcon />
+              {guardando ? 'Guardando...' : 'Guardar y Validar'}
+            </button>
           </div>
         </div>
 
@@ -386,7 +328,7 @@ export default function CuracionGrupoPage() {
         <div className="border-b border-outline-variant flex bg-surface-container-lowest rounded-t border border-b-0">
           <button
             onClick={() => setActiveTab('datos-maestros')}
-            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-all duration-300 ease-out cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-colors duration-100 cursor-pointer ${
               activeTab === 'datos-maestros'
                 ? 'border-[#001631] text-[#001631]'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
@@ -400,7 +342,7 @@ export default function CuracionGrupoPage() {
           </button>
           <button
             onClick={() => setActiveTab('miembros')}
-            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-all duration-300 ease-out cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-colors duration-100 cursor-pointer ${
               activeTab === 'miembros'
                 ? 'border-[#001631] text-[#001631]'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
@@ -416,7 +358,7 @@ export default function CuracionGrupoPage() {
         </div>
 
         {/* ── Contenido del Tab ─────────────────────────────────────────────── */}
-        <div key={activeTab} className="bg-surface-container-lowest border border-t-0 border-outline-variant rounded-b p-6 shadow-level-1 animate-sweep-in">
+        <div className="bg-surface-container-lowest border border-t-0 border-outline-variant rounded-b p-6 shadow-level-1">
 
           {/* TAB 1 — DATOS MAESTROS */}
           {activeTab === 'datos-maestros' && (
@@ -484,11 +426,7 @@ export default function CuracionGrupoPage() {
                     onChange={(e) => setSelectedLine(e.target.value)}
                     className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                   >
-                    {lineas.length === 0 ? (
-                      <option value="">Cargando líneas de investigación...</option>
-                    ) : (
-                      lineas.map((l) => <option key={l} value={l}>{l}</option>)
-                    )}
+                    {LINEAS_INVESTIGACION.map((l) => <option key={l} value={l}>{l}</option>)}
                   </select>
                   <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8]">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -506,7 +444,7 @@ export default function CuracionGrupoPage() {
               {/* Buscador en padrón */}
               <div>
                 <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
-                  Buscar en Padrón de Investigadores
+                  Buscar en Padrón de Investigadores (CUO4)
                 </p>
                 <div className="flex gap-2 items-center">
                   <div className="flex-1 relative max-w-xl">

@@ -2,17 +2,16 @@
 
 /**
  * @file nuevo/page.tsx
- * @route /grupos/nuevo
+ * @route /SGPI-CFGI/nuevo
  * @description Registro de Nuevo Grupo de Investigación — Carga Manual (Tabs: Datos Maestros / Gestión de Miembros)
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
-import { Button } from '@/SGPI-CFU/components/ui';
 import type { MiembroGrupo, RolMiembro, InvestigatorPadron, EstadoGrupo, FuenteOrigen } from '../_data/types';
-import { buscarInvestigadores, crearGrupo, validarCodigoGrupo, getLineasInvestigacion } from '../_data/service';
-import { useAuth } from '@/SGPI-CFU/lib/hooks';
+import { buscarInvestigadores, crearGrupo, validarCodigoGrupo } from '../_data/service';
+import { LINEAS_INVESTIGACION } from '../_data/mock';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Íconos SVG
@@ -35,7 +34,7 @@ const CheckIcon = () => (
 const SearchIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
   </svg>
 );
 
@@ -62,14 +61,6 @@ const InfoIcon = () => (
   </svg>
 );
 
-const ClearIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/>
-    <line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
-
 const CheckCircleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -85,7 +76,7 @@ const SpinnerIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
+const ClearIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
@@ -97,14 +88,6 @@ const CloseIcon = () => (
 
 export default function NuevoGrupoPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
-
-  // Redirigir si el usuario no es administrador
-  useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
-      router.replace('/grupos');
-    }
-  }, [user, isLoading, router]);
 
   const [activeTab, setActiveTab] = useState<'datos-maestros' | 'miembros'>('datos-maestros');
 
@@ -112,27 +95,10 @@ export default function NuevoGrupoPage() {
   const [code,            setCode]            = useState('');
   const [name,            setName]            = useState('');
   const [acronym,         setAcronym]         = useState('');
-  const [lineas,          setLineas]          = useState<string[]>([]);
-  const [selectedLine,    setSelectedLine]    = useState('');
+  const [selectedLine,    setSelectedLine]    = useState(LINEAS_INVESTIGACION[0]);
   const [status,          setStatus]          = useState<EstadoGrupo>('pendiente_validacion');
   const [recognitionDate, setRecognitionDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [fuente,          setFuente]          = useState<FuenteOrigen>('Manual');
-
-  // Cargar líneas de investigación reales desde configuracion_global
-  useEffect(() => {
-    async function loadLineas() {
-      try {
-        const data = await getLineasInvestigacion();
-        if (data && data.length > 0) {
-          setLineas(data);
-          setSelectedLine(data[0]);
-        }
-      } catch (err) {
-        console.error("Error cargando líneas de investigación:", err);
-      }
-    }
-    loadLineas();
-  }, []);
 
   // Form — Miembros
   const [miembros,           setMiembros]           = useState<MiembroGrupo[]>([]);
@@ -256,28 +222,15 @@ export default function NuevoGrupoPage() {
         fuente,
         miembros,
       });
-      router.push(`/grupos/${code.trim().toUpperCase()}/ficha?created=true`);
+      setShowToast(true);
+      setTimeout(() => {
+        router.push(`/SGPI-CFGI/${code.trim().toUpperCase()}/ficha`);
+      }, 2000);
     } catch (err: any) {
       setErrors([err.message || 'Error al guardar el grupo.']);
       setGuardando(false);
     }
   };
-
-  if (isLoading || !user || user.role !== 'admin') {
-    return (
-      <MainLayout title="" subtitle="">
-        <div className="flex h-[50vh] items-center justify-center bg-background">
-          <div className="flex flex-col items-center gap-3">
-            <svg className="animate-spin h-8 w-8 text-[#001631]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="font-sans text-[14px] text-[#475569]">Verificando credenciales...</span>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout title="" subtitle="">
@@ -290,7 +243,7 @@ export default function NuevoGrupoPage() {
           <div>
             {/* Back link */}
             <button
-              onClick={() => router.push('/grupos')}
+              onClick={() => router.push('/SGPI-CFGI')}
               className="inline-flex items-center gap-1 text-[13px] font-sans text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer mb-2"
               aria-label="Volver a la bandeja principal"
             >
@@ -310,24 +263,22 @@ export default function NuevoGrupoPage() {
 
           {/* Derecha — Cancelar + Guardar */}
           <div className="flex gap-2 flex-shrink-0 ml-4">
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => router.push('/grupos')}
+            <button
+              type="button"
+              onClick={() => router.push('/SGPI-CFGI')}
+              className="border border-[#e2e8f0] hover:bg-slate-50 font-sans text-[13px] text-[#475569] px-4 py-2 rounded transition-colors cursor-pointer"
             >
               Cancelar
-            </Button>
-            {user?.role === 'admin' && (
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleGuardar}
-                loading={guardando}
-                iconLeft={<CheckIcon />}
-              >
-                Guardar y Validar
-              </Button>
-            )}
+            </button>
+            <button
+              type="button"
+              onClick={handleGuardar}
+              disabled={guardando}
+              className="flex items-center gap-2 bg-[#001631] hover:bg-[#002b54] text-white font-sans font-bold text-[13px] px-4 py-2 rounded shadow transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <CheckIcon />
+              {guardando ? 'Guardando...' : 'Guardar y Validar'}
+            </button>
           </div>
         </div>
 
@@ -345,7 +296,7 @@ export default function NuevoGrupoPage() {
         <div className="border-b border-outline-variant flex bg-surface-container-lowest rounded-t border border-b-0">
           <button
             onClick={() => setActiveTab('datos-maestros')}
-            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-all duration-300 ease-out cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-colors duration-100 cursor-pointer ${
               activeTab === 'datos-maestros'
                 ? 'border-[#001631] text-[#001631]'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
@@ -358,7 +309,7 @@ export default function NuevoGrupoPage() {
           </button>
           <button
             onClick={() => setActiveTab('miembros')}
-            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-all duration-300 ease-out cursor-pointer ${
+            className={`flex items-center gap-2 px-5 py-3 font-sans font-semibold text-[13px] border-b-2 transition-colors duration-100 cursor-pointer ${
               activeTab === 'miembros'
                 ? 'border-[#001631] text-[#001631]'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
@@ -373,14 +324,14 @@ export default function NuevoGrupoPage() {
         </div>
 
         {/* ── Contenido del Tab ─────────────────────────────────────────────── */}
-        <div key={activeTab} className="bg-surface-container-lowest border border-t-0 border-outline-variant rounded-b p-6 shadow-level-1 animate-sweep-in">
+        <div className="bg-surface-container-lowest border border-t-0 border-outline-variant rounded-b p-6 shadow-level-1">
 
           {/* TAB 1 — DATOS MAESTROS */}
           {activeTab === 'datos-maestros' && (
             <div className="max-w-[620px] flex flex-col gap-5">
 
               {/* Código + Fuente */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="code" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Código Único (ID) <span className="text-red-500">*</span>
@@ -444,7 +395,7 @@ export default function NuevoGrupoPage() {
               </div>
 
               {/* Acrónimo + Fecha Registro */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="acronym" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Acrónimo / Siglas
@@ -473,7 +424,7 @@ export default function NuevoGrupoPage() {
               </div>
 
               {/* Línea de Investigación + Estado */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="linea" className="block font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
                     Línea de Investigación Principal
@@ -485,11 +436,7 @@ export default function NuevoGrupoPage() {
                       onChange={(e) => setSelectedLine(e.target.value)}
                       className="w-full appearance-none px-3 pr-8 py-2 font-sans text-[13px] text-on-surface bg-surface-container-lowest border border-outline-variant rounded outline-none focus:ring-2 focus:ring-[#a8c8fa]"
                     >
-                      {lineas.length === 0 ? (
-                        <option value="">Cargando líneas de investigación...</option>
-                      ) : (
-                        lineas.map((l) => <option key={l} value={l}>{l}</option>)
-                      )}
+                      {LINEAS_INVESTIGACION.map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
                     <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -529,7 +476,7 @@ export default function NuevoGrupoPage() {
               {/* Buscador en padrón */}
               <div>
                 <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-1.5">
-                  Buscar en Padrón de Investigadores
+                  Buscar en Padrón de Investigadores (CUO4)
                 </p>
                 <div className="flex gap-2 items-center">
                   <div className="flex-1 relative max-w-xl">
