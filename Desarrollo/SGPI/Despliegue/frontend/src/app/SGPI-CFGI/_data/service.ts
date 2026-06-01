@@ -320,6 +320,7 @@ export async function validarGrupo(
           investigador_sm: false,
           tiene_deuda_gi: false,
           tiene_deuda_pi: false,
+          is_external: true,
         }, { onConflict: 'dni' });
       if (errUpsert) {
         console.error(`Error auto-importing external researcher ${m.dni}:`, errUpsert);
@@ -442,6 +443,7 @@ export async function crearGrupo(
           investigador_sm: false,
           tiene_deuda_gi: false,
           tiene_deuda_pi: false,
+          is_external: true,
         }, { onConflict: 'dni' });
       if (errUpsert) {
         console.error(`Error auto-importing external researcher ${m.dni}:`, errUpsert);

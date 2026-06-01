@@ -10,7 +10,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
 import type { MiembroProyecto, RolMiembroProyecto, EstadoProyecto } from '../_data/types';
-import { buscarInvestigadores, crearProyecto, getGruposDisponibles, getConvocatorias } from '../_data/service';
+import { buscarInvestigadores, crearProyecto, getGruposDisponibles, getConvocatorias, getProyectoById } from '../_data/service';
 import type { GrupoInvestigacion } from '../_data/service';
 import type { InvestigatorPadron } from '../../SGPI-CFGI/_data/types';
 
@@ -160,6 +160,46 @@ export default function NuevoProyectoPage() {
       setGruposLoading(false);
       setConvocatoriasLoading(false);
     });
+  }, []);
+
+  // Pre-load from importCode query param
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const importCode = searchParams.get('importCode');
+    if (importCode) {
+      setGuardando(true);
+      getProyectoById(importCode)
+        .then((data) => {
+          if (data) {
+            setCode(data.code || '');
+            setTitle(data.title || '');
+            setTipo(data.tipo || 'Aplicado');
+            setPrograma(data.programa || 'VRIP General');
+            setConvocatoria(data.convocatoria || '');
+            setResolucion(data.resolucion || '');
+            setMontoFinanciado(data.montoFinanciado || 0);
+            if (data.inicioPlanificado) setInicioPlanificado(data.inicioPlanificado);
+            if (data.finPlanificado) setFinPlanificado(data.finPlanificado);
+            if (data.grupoVinculado) setGrupoVinculado(data.grupoVinculado);
+            if (data.responsablePrincipal) setResponsablePrincipal(data.responsablePrincipal);
+            
+            if (data.miembros && data.miembros.length > 0) {
+              setMiembros(data.miembros);
+            } else if (data.responsablePrincipal) {
+              setMiembros([
+                {
+                  dni: '00000000',
+                  nombre: data.responsablePrincipal,
+                  rol: 'Responsable Principal',
+                  estado: 'activo'
+                }
+              ]);
+            }
+          }
+        })
+        .catch((err) => console.error('Error loading import project:', err))
+        .finally(() => setGuardando(false));
+    }
   }, []);
 
   // Búsqueda de investigadores
