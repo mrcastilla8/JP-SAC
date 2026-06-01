@@ -1,7 +1,7 @@
 import json
 import requests
 from decimal import Decimal
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sgpi_ci.config import settings, DEFAULT_CHUNK_SIZE
 
@@ -38,12 +38,135 @@ class SupabaseUploader:
             print(f"Error obteniendo grupos de BD: {e}")
             return []
 
+    def fetch_investigadores(self) -> List[Dict[str, Any]]:
+        """Obtiene todos los investigadores registrados para mapeo local y evitar consultas redundantes."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/investigador?select=dni,nombres,apellidos,institucion_principal,codigo_renacyt,orcid,categoria_renacyt,estado_renacyt,url_cti_vitae,investigador_sm,is_external"
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Error obteniendo investigadores de BD: {e}")
+            return []
+
+    def fetch_lineas_investigacion(self) -> List[str]:
+        """Obtiene las líneas de investigación oficiales desde linea_investigacion."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/linea_investigacion?select=nombre"
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            if data and isinstance(data, list):
+                return [item.get("nombre") for item in data if item.get("nombre")]
+            return []
+        except Exception as e:
+            print(f"Error obteniendo lineas de investigacion de BD: {e}")
+            return []
+
+    def fetch_departamentos(self) -> List[str]:
+        """Obtiene los departamentos académicos oficiales."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/departamento_academico?select=nombre"
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            if data and isinstance(data, list):
+                return [item.get("nombre") for item in data if item.get("nombre")]
+            return []
+        except Exception as e:
+            print(f"Error obteniendo departamentos de BD: {e}")
+            return []
+
+    def upsert_linea_investigacion(self, nombre: str, estado: str = 'Pendiente') -> None:
+        """Registra una línea de investigación (si no existe, se inserta como Pendiente)."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=ignore-duplicates"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/linea_investigacion?on_conflict=nombre"
+        try:
+            payload = {"nombre": nombre, "estado": estado}
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+        except Exception as e:
+            err_detail = getattr(e.response, 'text', '') if hasattr(e, 'response') else str(e)
+            print(f"Error al registrar línea de investigación '{nombre}': {e} - Detalle: {err_detail}")
+
+    def upsert_departamento_academico(self, nombre: str, estado: str = 'Pendiente') -> None:
+        """Registra un departamento académico (si no existe, se inserta como Pendiente)."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=ignore-duplicates"
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/departamento_academico?on_conflict=nombre"
+        try:
+            payload = {"nombre": nombre, "estado": estado}
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+        except Exception as e:
+            err_detail = getattr(e.response, 'text', '') if hasattr(e, 'response') else str(e)
+            print(f"Error al registrar departamento académico '{nombre}': {e} - Detalle: {err_detail}")
+
+
+
+    def send_to_quarantine(
+        self,
+        entidad: str,
+        llave_sugerida: str,
+        datos_conflicto: dict,
+        motivo: str,
+    ) -> None:
+        """Inserta un registro en reconciliacion_pendientes (cuarentena) via REST."""
+        settings.validate()
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        }
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/reconciliacion_pendientes"
+        payload = {
+            "entidad_afectada": entidad,
+            "llave_primaria_sugerida": llave_sugerida,
+            "fuentes_involucradas": ["IMPORT_CI"],
+            "datos_conflicto": datos_conflicto,
+            "motivo_cuarentena": motivo,
+            "estado": "Pendiente",
+        }
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+        except Exception as e:
+            print(f"[cuarentena] Error al enviar a cuarentena ({entidad} {llave_sugerida}): {e}")
+
     def upload(
         self,
         rpc_name: str,
         records: List[Dict[str, Any]],
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         quiet: bool = False,
+        id_usuario: Optional[str] = None,
     ) -> Dict[str, int]:
         """
         Envía registros validados a Supabase en batches mediante llamada RPC.
@@ -53,16 +176,17 @@ class SupabaseUploader:
             records:    Lista de dicts validados por Pydantic.
             chunk_size: Registros por llamada (default: 200).
             quiet:      Suprime mensajes de progreso si True.
+            id_usuario: ID del usuario (UUID) que ejecuta la importación.
 
         Returns:
             {'insertados': n, 'actualizados': n, 'fallidos': n}
 
         Raises:
             ConnectionError: [EX4] Si hay un error de red durante la carga.
-        """
+            """
         settings.validate()
 
-        totals: Dict[str, int] = {"procesados": 0, "fallidos": 0}
+        totals: Dict[str, int] = {"insertados": 0, "actualizados": 0, "fallidos": 0}
 
         chunks = [
             records[i : i + chunk_size]
@@ -88,18 +212,23 @@ class SupabaseUploader:
                     json.dumps(chunk, default=self._serialize)
                 )
 
+                body = {"payload": payload_json}
+                if id_usuario:
+                    body["id_usuario"] = id_usuario
+
                 response = requests.post(
                     url,
                     headers=headers,
-                    json={"payload": payload_json}
+                    json=body
                 )
                 
                 response.raise_for_status()
                 data = response.json()
 
                 if data and isinstance(data, dict):
-                    totals["procesados"]  += data.get("procesados", 0)
-                    totals["fallidos"]    += data.get("fallidos", 0)
+                    totals["insertados"]   += data.get("insertados",   0)
+                    totals["actualizados"] += data.get("actualizados", 0)
+                    totals["fallidos"]     += data.get("fallidos",     0)
 
             except Exception as e:
                 # [EX4]: Cada chunk es una llamada RPC independiente.

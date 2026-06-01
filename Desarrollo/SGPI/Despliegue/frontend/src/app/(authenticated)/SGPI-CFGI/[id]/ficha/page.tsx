@@ -2,14 +2,15 @@
 
 /**
  * @file [id]/ficha/page.tsx
- * @route /SGPI-CFGI/[id]/ficha
+ * @route /grupos/[id]/ficha
  * @description Ficha Consolidada de Grupo — usa el ExportFlow compartido de SGPI-CFE.
  */
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
-import { ExportFlow } from '@/SGPI-CFU/components/SGPI-CFE/export/ExportFlow';
+import dynamic from 'next/dynamic';
+const ExportFlow = dynamic(() => import('@/SGPI-CFU/components/SGPI-CFE/export/ExportFlow').then(mod => mod.ExportFlow), { ssr: false });
 import type { GrupoInvestigacion, EstadoGrupo } from '../../_data/types';
 import { getGrupoById, buscarTesisExternas, vincularTesis } from '../../_data/service';
 
@@ -91,6 +92,21 @@ export default function FichaGrupoPage() {
   const [toastMsg,           setToastMsg]           = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('created') === 'true') {
+        setToastMsg("Grupo creado y validado exitosamente.");
+        const timer = setTimeout(() => setToastMsg(null), 3000);
+        return () => clearTimeout(timer);
+      } else if (urlParams.get('validated') === 'true') {
+        setToastMsg("Grupo validado exitosamente.");
+        const timer = setTimeout(() => setToastMsg(null), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     async function cargar() {
       setCargando(true);
       try {
@@ -163,7 +179,7 @@ export default function FichaGrupoPage() {
       <MainLayout title="" subtitle="">
         <div className="flex flex-col gap-6 animate-pulse">
           <div className="h-8 bg-slate-100 rounded w-1/4"/>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="col-span-2 h-96 bg-slate-100 rounded"/>
             <div className="col-span-1 h-96 bg-slate-100 rounded"/>
           </div>
@@ -177,7 +193,7 @@ export default function FichaGrupoPage() {
       <MainLayout title="" subtitle="">
         <div className="bg-red-50 text-red-800 p-6 rounded border border-red-200">
           <p className="font-sans font-bold">No se encontró el grupo.</p>
-          <button onClick={() => router.push('/SGPI-CFGI')} className="mt-3 text-[13px] underline cursor-pointer">Volver</button>
+          <button onClick={() => router.push('/grupos')} className="mt-3 text-[13px] underline cursor-pointer">Volver</button>
         </div>
       </MainLayout>
     );
@@ -204,7 +220,7 @@ export default function FichaGrupoPage() {
 
           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
             <button
-              onClick={() => router.push('/SGPI-CFGI')}
+              onClick={() => router.push('/grupos')}
               className="flex items-center gap-1.5 border border-outline-variant hover:bg-surface-container font-sans text-[13px] text-on-surface px-4 py-2 rounded transition-colors cursor-pointer"
             >
               <BackIcon />
@@ -237,7 +253,7 @@ export default function FichaGrupoPage() {
                 Identificación Institucional
               </p>
 
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-4">
                 <div>
                   <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Código Oficial</p>
                   <p className="font-sans font-bold text-[13px] text-on-surface mt-0.5">{grupo.code}</p>
@@ -271,7 +287,7 @@ export default function FichaGrupoPage() {
               <p className="font-sans font-bold text-[10px] text-on-surface uppercase tracking-widest mb-4">
                 Productividad Científica
               </p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="border border-outline-variant rounded p-4 text-center bg-surface-container-low">
                   <p className="font-heading font-bold text-[32px] text-on-surface">{proyectosActivos}</p>
                   <p className="font-sans text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mt-1">Proyectos Activos</p>
@@ -409,7 +425,7 @@ export default function FichaGrupoPage() {
                           </p>
                           {t.resumen_abstract && (
                             <p className="font-sans text-[11px] text-[#64748b] mt-1.5 line-clamp-2 leading-relaxed italic text-left">
-                              "{t.resumen_abstract}"
+                              &quot;{t.resumen_abstract}&quot;
                             </p>
                           )}
                         </div>
@@ -506,7 +522,7 @@ export default function FichaGrupoPage() {
 
       {/* ── ExportFlow (componente compartido SGPI-CFE) ────────────────── */}
       {showExportFlow && (
-        <ExportFlow context={`ficha_grupo_${id}`} onClose={() => setShowExportFlow(false)} />
+        <ExportFlow context={`ficha_grupo_${id}`} result={grupo} onClose={() => setShowExportFlow(false)} />
       )}
 
       {/* Toast de éxito */}
