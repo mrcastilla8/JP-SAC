@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update, insert, delete
+from sqlalchemy import update, insert
 from sqlalchemy.sql import func
 from typing import Dict, Any, List
 from app.models.domain import ReconciliacionPendiente, LogAuditoria, Investigador, Proyecto, Publicacion, Tesis
@@ -11,13 +11,14 @@ class ReconciliationPersister:
         """
         Guarda el registro en cuarentena.
         """
+        estado_final = 'Rechazado' if motivo and motivo.startswith('Rechazado') else 'Pendiente'
         pendiente = ReconciliacionPendiente(
             entidad_afectada=entidad,
             llave_primaria_sugerida=llave_sugerida,
             fuentes_involucradas=fuentes,
             datos_conflicto=conflicto,
             motivo_cuarentena=motivo,
-            estado='Pendiente'
+            estado=estado_final
         )
         db.add(pendiente)
 
@@ -104,11 +105,59 @@ class ReconciliationPersister:
                 existing = result.scalars().first()
                 # Cybertesis API devuelve texto que adaptamos a columnas de tesis
                 # Este payload de Tesis tiene dni_asesor_reconciliado
+                dni_asesor = merged_data.get("dni_asesor_reconciliado", None)
+                
+                # Para evitar violaciones de llave foránea (FK), persistimos al investigador si no existe
+                if dni_asesor:
+                    res_inv = await db.execute(select(Investigador).where(Investigador.dni == dni_asesor))
+                    if not res_inv.scalars().first():
+                        datos_r = merged_data.get("datos_renacyt")
+                        if datos_r:
+                            apellidos = f"{datos_r.get('apellido_paterno', '')} {datos_r.get('apellido_materno', '')}".strip()
+                            nuevo_inv = {
+                                "dni": dni_asesor,
+                                "nombres": str(datos_r.get("nombres", "")).title(),
+                                "apellidos": str(apellidos).title(),
+                                "condicion_laboral": "No Especificado",
+                                "departamento_academico": "Externo (RENACYT)",
+                                "grado_academico_max": None,
+                                "codigo_renacyt": datos_r.get("codigo_registro"),
+                                "categoria_renacyt": datos_r.get("nivel", "No Clasificado"),
+                                "estado_renacyt": datos_r.get("condicion"),
+                                "url_cti_vitae": datos_r.get("cti_vitae"),
+                                "orcid": datos_r.get("orcid"),
+                                "institucion_principal": datos_r.get("institucion_laboral_principal"),
+                                "investigador_sm": True,
+                                "estado_vigencia": "Activo",
+                                "is_external": True
+                            }
+                            await db.execute(insert(Investigador).values(**nuevo_inv))
+                        else:
+                            # Fallback si no hay datos completos pero tenemos DNI y nombre
+                            apellidos = ""
+                            nombres = merged_data.get("asesor_texto", "Externo")
+                            if " " in nombres:
+                                parts = nombres.split()
+                                nombres = " ".join(parts[:2])
+                                apellidos = " ".join(parts[2:])
+                            nuevo_inv = {
+                                "dni": dni_asesor,
+                                "nombres": nombres,
+                                "apellidos": apellidos or "Externo",
+                                "condicion_laboral": "No Especificado",
+                                "departamento_academico": "Externo (RENACYT)",
+                                "grado_academico_max": None,
+                                "investigador_sm": True,
+                                "estado_vigencia": "Activo",
+                                "is_external": True
+                            }
+                            await db.execute(insert(Investigador).values(**nuevo_inv))
+                
                 tesis_data = {
                     "url_cybertesis": merged_data.get("url_cybertesis", llave_pk),
                     "titulo_tesis": merged_data.get("titulo_tesis", "Sin Título"),
                     "asesor_texto": merged_data.get("asesor_texto", ""),
-                    "dni_asesor": merged_data.get("dni_asesor_reconciliado", None),
+                    "dni_asesor": dni_asesor,
                     "autor_estudiante_texto": merged_data.get("autor_estudiante_texto")
                 }
                 
@@ -167,6 +216,7 @@ class ReconciliationPersister:
         elif action == 'rechazar':
             item.estado = 'Rechazado'
             
+        item.fecha_revision = func.now()
         db.add(item)
         await db.commit()
 

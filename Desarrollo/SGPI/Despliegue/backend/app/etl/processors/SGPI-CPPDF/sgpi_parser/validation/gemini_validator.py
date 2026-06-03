@@ -1,6 +1,5 @@
 import time
 from pathlib import Path
-from typing import Union
 import google.generativeai as genai
 from pydantic import BaseModel
 

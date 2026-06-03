@@ -11,15 +11,12 @@ logger = logging.getLogger("renacyt_connector")
 
 class RenacytError(Exception):
     """Base exception for RENACYT connector errors."""
-    pass
 
 class RenacytConnectionError(RenacytError):
     """Raised when there are connection failures or all endpoints are down."""
-    pass
 
 class RenacytAPIError(RenacytError):
     """Raised when the API returns an error or invalid status code."""
-    pass
 
 class RenacytConnector:
     """
@@ -37,7 +34,7 @@ class RenacytConnector:
         'Accept': 'application/json'
     }
     
-    def __init__(self, base_urls=None, verify_ssl=False, rate_limit_delay=1.0, timeout=15, max_retries=3):
+    def __init__(self, base_urls=None, verify_ssl=False, rate_limit_delay=1.0, timeout=5, max_retries=2):
         """
         Initializes the RENACYT connector.
         
@@ -55,6 +52,7 @@ class RenacytConnector:
         self.rate_limit_delay = rate_limit_delay
         self.timeout = timeout
         self.max_retries = max_retries
+        self.is_offline = False
         
         # Configure SSL Context
         if not self.verify_ssl:
@@ -81,6 +79,9 @@ class RenacytConnector:
         """
         Executes an HTTP request with built-in retries, failovers, and rate limiting.
         """
+        if self.is_offline:
+            raise RenacytConnectionError("RENACYT API is offline (previous connection attempts failed).")
+
         await self._apply_rate_limit()
         
         # Keep track of errors across all endpoints to raise a descriptive exception if everything fails
@@ -137,9 +138,10 @@ class RenacytConnector:
                 # If we reach here, this base_url failed after max_retries. Let's try the next endpoint in line.
                 logger.warning(f"Endpoint {base_url} failed all attempts. Trying next fallback URL...")
 
-        # If we exhausted all base URLs and attempts
+        # If we exhausted all base URLs and attempts, mark as offline to prevent further queries
+        self.is_offline = True
         raise RenacytConnectionError(
-            f"Failed to execute request on all endpoints. Technical logs:\n" + "\n".join(all_errors)
+            "Failed to execute request on all endpoints. Technical logs:\n" + "\n".join(all_errors)
         )
 
     @property

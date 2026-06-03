@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, BackgroundTasks, Depends, Header, HTTPException, status
@@ -6,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from db.connection import get_db, engine, Base
-from db.models import LogAuditoria
 from jobs.alerts_job import AlertsJob
 
 # Crear las tablas en la base de datos de desarrollo local/SQLite si no existen

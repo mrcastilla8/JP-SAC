@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.db.session import get_db
 from sgpi_capiac.crud import crud_usuario
-from sgpi_capiac.schemas.capiac_schemas import UsuarioResponse, UsuarioCreate
+from sgpi_capiac.schemas.capiac_schemas import UsuarioResponse, UsuarioCreate, UsuarioUpdate
 
 router = APIRouter()
 
@@ -36,7 +36,6 @@ async def create_usuario(
     current_user_id = None
     
     # Validar si ya existe el correo
-    import supabase
     try:
         usuario_creado = await crud_usuario.usuario.create_with_auth(
             db=db, 
@@ -75,3 +74,52 @@ async def toggle_estado_usuario(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
     return usuario_actualizado
+
+
+@router.put("/{id_usuario}", response_model=UsuarioResponse)
+async def update_usuario(
+    *,
+    db: AsyncSession = Depends(get_db),
+    id_usuario: UUID,
+    usuario_in: UsuarioUpdate,
+) -> Any:
+    """
+    Actualiza la información de un usuario (rol, estado de cuenta).
+    """
+    # TODO: Integrar current_user
+    current_user_id = None
+    
+    usuario_obj = await crud_usuario.usuario.get(db, id=id_usuario)
+    if not usuario_obj:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    usuario_actualizado = await crud_usuario.usuario.update_usuario(
+        db=db,
+        db_obj=usuario_obj,
+        obj_in=usuario_in,
+        current_user_id=current_user_id
+    )
+    return usuario_actualizado
+
+
+@router.delete("/{id_usuario}")
+async def delete_usuario(
+    *,
+    db: AsyncSession = Depends(get_db),
+    id_usuario: UUID,
+) -> Any:
+    """
+    Elimina un usuario por su UUID, tanto de Supabase Auth como de la base de datos SQL.
+    """
+    # TODO: Integrar current_user
+    current_user_id = None
+    
+    eliminado = await crud_usuario.usuario.delete_user(
+        db=db,
+        id_usuario=id_usuario,
+        current_user_id=current_user_id
+    )
+    if not eliminado:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    return {"status": "success", "message": "Usuario eliminado correctamente"}

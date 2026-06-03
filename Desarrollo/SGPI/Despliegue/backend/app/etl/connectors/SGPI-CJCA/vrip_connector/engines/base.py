@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Any
 from vrip_connector.config import settings
 from vrip_connector.core.client import client
 
@@ -21,4 +21,3 @@ class BaseExtractor(ABC):
     @abstractmethod
     def extract(self, **kwargs) -> List[Any]:
         """Performs search and extraction. Returns list of parsed models."""
-        pass

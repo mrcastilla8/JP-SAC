@@ -1,5 +1,4 @@
 import os
-import re
 from typing import Optional, List
 from cybertesis_connector.core.normalizer import strip_accents
 

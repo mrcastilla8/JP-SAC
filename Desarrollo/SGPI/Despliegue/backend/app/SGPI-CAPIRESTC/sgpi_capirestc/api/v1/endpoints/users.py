@@ -5,7 +5,7 @@ import uuid
 
 from app.db.session import get_db
 from sgpi_capirestc.crud.crud_usuario import usuario
-from sgpi_capirestc.schemas.domain_schemas import UsuarioBase, UsuarioUpdate, UsuarioResponse
+from sgpi_capirestc.schemas.domain_schemas import UsuarioUpdate, UsuarioResponse
 from app.core.security import get_current_user, require_admin
 from app.core.audit import log_audit_event
 

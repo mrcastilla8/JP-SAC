@@ -41,15 +41,42 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
+from fastapi import Request
+from jose import jwt
+from sqlalchemy import text
+
 # ---------------------------------------------------------------------------
 # Dependencia FastAPI — inyección de sesión de base de datos
 # ---------------------------------------------------------------------------
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db(request: Request = None) -> AsyncGenerator[AsyncSession, None]:
     """
     Dependencia que provee una sesión async a los endpoints.
     Garantiza el cierre de la sesión incluso si ocurre una excepción.
+    Intenta extraer el ID del usuario del JWT para configurar app.current_user_id en Postgres.
     """
+    user_id = None
+    if request:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                # Decodifica claims sin verificar firma para evitar fallos de red/caching
+                # durante la inicialización de get_db. La seguridad real es validada
+                # por Depends(get_current_user) en los endpoints.
+                payload = jwt.get_unverified_claims(token)
+                user_id = payload.get("sub")
+            except Exception:
+                pass
+
     async with AsyncSessionLocal() as session:
+        if user_id:
+            try:
+                await session.execute(
+                    text("SELECT set_config('app.current_user_id', :uid, true)"),
+                    {"uid": str(user_id)}
+                )
+            except Exception:
+                pass
         try:
             yield session
         except Exception:

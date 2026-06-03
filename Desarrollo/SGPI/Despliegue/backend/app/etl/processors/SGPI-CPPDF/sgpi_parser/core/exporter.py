@@ -1,13 +1,9 @@
-import os
-import sys
-import json
-from typing import Optional, Union, List, Any
+from typing import Optional
 from pydantic import BaseModel
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-from sgpi_parser.core.models import ResolucionRectoral, Cronograma, ResultadosConcurso
 
 # Colores del manual de identidad visual de SGPI (Slate-Blue & Teal)
 COLOR_TITLE_BG = "1E293B"       # Slate Blue Oscuro (#1E293B)

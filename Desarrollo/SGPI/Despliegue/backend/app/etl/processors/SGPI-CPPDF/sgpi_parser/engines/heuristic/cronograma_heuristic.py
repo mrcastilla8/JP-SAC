@@ -1,10 +1,9 @@
 import re
 from typing import Optional
-from pydantic import BaseModel
 from sgpi_parser.core.base_parser import BaseParser
 from sgpi_parser.core.models import Cronograma, MetadataCronograma, ActividadCronograma
 from sgpi_parser.utils.pdf_utils import get_plumber_doc, extract_raw_text_fitz
-from sgpi_parser.utils.string_utils import clean_text, parse_spanish_date_range, fuzzy_match
+from sgpi_parser.utils.string_utils import clean_text, parse_spanish_date_range
 
 class HeuristicCronogramaParser(BaseParser):
     """

@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 import time
 from typing import Dict, Any, List, Optional
 
@@ -31,21 +30,33 @@ import re
 import unicodedata
 
 class EtlProcessor:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, id_usuario: Optional[str] = None):
         self.file_path = file_path
         self.filename = os.path.basename(file_path)
         self.uploader = SupabaseUploader()
         self.failed_rows: List[Dict[str, Any]] = []
+        self.id_usuario = id_usuario
 
-    def process(self, upload_to_db: bool = True) -> Dict[str, Any]:
+    async def process(self, upload_to_db: bool = True, on_progress: Optional[Any] = None) -> Dict[str, Any]:
         """Orquesta la extracción, enriquecimiento y carga."""
+        import asyncio
         start_time = time.time()
         log_connector_status("SGPI-CI", "START", 0.0, details=f"Iniciando procesamiento del archivo {self.filename}")
+
+        def update_progress(msg: str, progress_val: int):
+            if on_progress:
+                try:
+                    on_progress(msg, progress_val)
+                except Exception as ex:
+                    logger.warning(f"Error in progress callback: {ex}")
+            logger.info(f"[{self.filename}] {msg} ({progress_val}%)")
+
+        update_progress("Analizando formato y estructura del archivo...", 15)
         
         # 1. Extracción (Parsers Heurísticos)
         try:
             parser = ParserFactory.get_parser(self.filename)
-            raw_data = parser.parse(self.file_path)
+            raw_data = await asyncio.to_thread(parser.parse, self.file_path)
         except Exception as e:
             duration = time.time() - start_time
             log_connector_status(
@@ -56,7 +67,7 @@ class EtlProcessor:
             )
             return {"error": f"Fallo al parsear el archivo: {e}"}
 
-        logger.info(f"[{self.filename}] Datos extraídos. Iniciando enriquecimiento RENACYT...")
+        update_progress("Archivo leído con éxito. Identificando investigadores...", 22)
 
         # 2. Enriquecimiento (Extraer nombres únicos y consultar Renacyt)
         unique_names = set()
@@ -77,40 +88,20 @@ class EtlProcessor:
         if not search_by_name:
             logger.warning(f"[{self.filename}] renacyt_connector no disponible. No se podrá enriquecer.")
 
-        # Obtener todos los investigadores registrados localmente para evitar búsquedas redundantes
-        logger.info(f"[{self.filename}] Cargando investigadores registrados localmente...")
-        investigadores_db = self.uploader.fetch_investigadores()
+        update_progress(f"Se identificaron {len(unique_names)} investigadores únicos. Consultando padrón local...", 26)
+        investigadores_db = await asyncio.to_thread(self.uploader.fetch_investigadores)
         
         # Instanciar el conector una sola vez y bajar el delay
         renacyt_client = RenacytConnector(verify_ssl=False) if RenacytConnector else None
         if renacyt_client:
             renacyt_client.rate_limit_delay = 0.1
 
-        import asyncio
         try:
             from app.core.cache import cache_get, cache_set, normalize_query
         except ImportError:
             cache_get = None
             cache_set = None
             normalize_query = None
-
-        def run_sync(coro):
-            try:
-                return asyncio.run(coro)
-            except RuntimeError:
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        return loop.run_until_complete(coro)
-                    else:
-                        return loop.run_until_complete(coro)
-                except Exception:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        return loop.run_until_complete(coro)
-                    finally:
-                        loop.close()
 
         def normalize_str(s):
             return unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('utf-8').upper()
@@ -142,7 +133,7 @@ class EtlProcessor:
                     return inv
             return None
 
-        def robust_renacyt_search(name_str: str):
+        async def robust_renacyt_search(name_str: str):
             # 1. Comprobación local en memoria (Base de Datos)
             db_match = match_local_db(name_str)
             if db_match:
@@ -166,7 +157,7 @@ class EtlProcessor:
                 norm_name = normalize_query(name_str)
                 cache_key = f"renacyt:search:{norm_name}:p1:l1"
                 try:
-                    cached_data = run_sync(cache_get(cache_key))
+                    cached_data = await cache_get(cache_key)
                     if cached_data is not None:
                         cached_items = cached_data.get("items", [])
                         if cached_items:
@@ -202,7 +193,7 @@ class EtlProcessor:
             # 3.1. Intentamos buscar usando el nuevo método optimizado en paralelo (search_by_fullname)
             if hasattr(renacyt_client, 'search_by_fullname'):
                 try:
-                    res = run_sync(renacyt_client.search_by_fullname(name_str, page_size=100))
+                    res = await renacyt_client.search_by_fullname(name_str, page_size=100)
                     if res and res.get('total', 0) > 0 and res.get('data'):
                         for r in res['data']:
                             c_full = normalize_str(str(r.get('nombre_completo', '')))
@@ -218,7 +209,7 @@ class EtlProcessor:
                 try:
                     extracted_lastname = extract_lastnames(name_str)
                     if extracted_lastname:
-                        res = run_sync(renacyt_client.search_by_lastname(extracted_lastname, page_size=100))
+                        res = await renacyt_client.search_by_lastname(extracted_lastname, page_size=100)
                         if res and res.get('total', 0) > 0 and res.get('data'):
                             for r in res['data']:
                                 c_full = normalize_str(str(r.get('nombre_completo', '')))
@@ -240,7 +231,7 @@ class EtlProcessor:
 
                 for cand in candidates:
                     try:
-                        res = run_sync(renacyt_client.search_by_name(cand, page_size=100))
+                        res = await renacyt_client.search_by_name(cand, page_size=100)
                         if res and res.get('total', 0) > 0 and res.get('data'):
                             for r in res['data']:
                                 c_full = normalize_str(str(r.get('nombre_completo', '')))
@@ -260,7 +251,7 @@ class EtlProcessor:
                     if dni_val:
                         # Cache DNI (24h)
                         dni_key = f"renacyt:dni:{dni_val}"
-                        run_sync(cache_set(dni_key, match, 86400))
+                        await cache_set(dni_key, match, 86400)
                         
                         # Cache búsqueda (1h)
                         mapped_item = {
@@ -286,22 +277,26 @@ class EtlProcessor:
                         }
                         norm_name = normalize_query(name_str)
                         search_key = f"renacyt:search:{norm_name}:p1:l1"
-                        run_sync(cache_set(search_key, {"total": 1, "items": [mapped_item]}, 3600))
+                        await cache_set(search_key, {"total": 1, "items": [mapped_item]}, 3600)
                 except Exception as cache_err:
                     logger.warning(f"Error al escribir en caché de Redis en ETL: {cache_err}")
 
             return match
 
 
-        for name in unique_names:
+        total_names = len(unique_names)
+        for index, name in enumerate(unique_names, 1):
             if not name or not search_by_name:
                 continue
             
             # Limpiar nombre para la búsqueda (títulos)
             search_name = re.sub(r'^(Dr\.|Mg\.|Mag\.|Ing\.|Lic\.)\s*', '', name, flags=re.IGNORECASE).strip()
             
+            pct = 30 + int((index / total_names) * 45) if total_names > 0 else 75
+            update_progress(f"Buscando en RENACYT: {search_name} ({index}/{total_names})", pct)
+            
             try:
-                match = robust_renacyt_search(search_name)
+                match = await robust_renacyt_search(search_name)
                 if match:
                     dni = str(match.get('numero_documento', ''))
                     
@@ -342,12 +337,12 @@ class EtlProcessor:
                     "dato": name
                 })
 
-        logger.info(f"[{self.filename}] Enriquecimiento completo. {len(name_to_dni)} DNIs resueltos.")
+        update_progress(f"Búsqueda finalizada. Se resolvieron {len(name_to_dni)} investigadores con DNI.", 75)
 
         # ---------------------------------------------------------
         # MATCHING DE GRUPOS DE INVESTIGACIÓN (Fuzzy / Exacto)
         # ---------------------------------------------------------
-        logger.info(f"[{self.filename}] Obteniendo padrón de grupos para Foreign Keys...")
+        update_progress("Obteniendo padrón de grupos de investigación para validación...", 78)
         try:
             from rapidfuzz import process, fuzz
             has_rapidfuzz = True
@@ -355,7 +350,7 @@ class EtlProcessor:
             has_rapidfuzz = False
             logger.warning(f"[{self.filename}] rapidfuzz no instalado, el mapeo de grupos será exacto.")
             
-        grupos_db = self.uploader.fetch_grupos()
+        grupos_db = await asyncio.to_thread(self.uploader.fetch_grupos)
         
         def match_grupo(query_str: str) -> Optional[int]:
             if not query_str or not grupos_db: return None
@@ -402,6 +397,7 @@ class EtlProcessor:
             return None
 
         # 3. Ensamblaje de Modelos Finales
+        update_progress("Validando y relacionando registros de proyectos, publicaciones y tesis...", 83)
         proyectos_validos, publicaciones_validas, tesis_validas, grupos_validos = [], [], [], []
 
         # Proyectos
@@ -458,6 +454,10 @@ class EtlProcessor:
             except ValidationError as e:
                 self.failed_rows.append({"tipo": "VALIDACION_TESIS", "dato": tes, "mensaje": str(e)})
 
+        # Obtener catálogo de líneas oficiales de configuracion_global para normalización dinámica
+        lineas_oficiales = await asyncio.to_thread(self.uploader.fetch_lineas_investigacion)
+        mapa_lineas = {linea.lower().strip(): linea for linea in lineas_oficiales}
+
         # Grupos de Investigación
         grupos_dict = {}
         for g in raw_data.get('grupos', []):
@@ -479,28 +479,51 @@ class EtlProcessor:
             if dni:
                 grupos_dict[nombre]['miembros'].append({'dni': dni, 'condicion_miembro': m.get('condicion_miembro', 'Titular')})
             if m.get('lineas_investigacion'):
-                grupos_dict[nombre]['lineas_investigacion'].extend(m['lineas_investigacion'])
+                # Normalizar dinámicamente con case-insensitive matching
+                normalizadas = []
+                for linea in m['lineas_investigacion']:
+                    linea_clean = linea.strip()
+                    linea_lower = linea_clean.lower()
+                    if linea_lower in mapa_lineas:
+                        normalizadas.append(mapa_lineas[linea_lower])
+                    else:
+                        normalizadas.append(linea_clean)
+                        # Registrar línea no reconocida como 'Pendiente' de forma asíncrona
+                        await asyncio.to_thread(self.uploader.upsert_linea_investigacion, linea_clean, 'Pendiente')
+                grupos_dict[nombre]['lineas_investigacion'].extend(normalizadas)
                 
         for g in grupos_dict.values():
+            # Eliminar duplicados manteniendo orden
+            unique_lines = []
+            for linea in g.get('lineas_investigacion', []):
+                if linea not in unique_lines:
+                    unique_lines.append(linea)
+            g['lineas_investigacion'] = unique_lines
             try:
                 grupos_validos.append(GrupoInvestigacionModel(**g).model_dump())
             except ValidationError as e:
                 self.failed_rows.append({"tipo": "VALIDACION_GRUPO", "dato": g, "mensaje": str(e)})
 
+
         # 4. Carga (Supabase)
         resultados_db = {}
         if upload_to_db:
-            logger.info(f"[{self.filename}] Cargando a BD...")
+            update_progress("Guardando cambios en la base de datos...", 90)
             if investigadores_validos:
-                resultados_db['investigadores'] = self.uploader.upload('importar_ci_investigadores', investigadores_validos)
+                update_progress("Guardando nuevos investigadores y datos de RENACYT...", 92)
+                resultados_db['investigadores'] = await asyncio.to_thread(self.uploader.upload, 'importar_ci_investigadores', investigadores_validos, id_usuario=self.id_usuario)
             if proyectos_validos:
-                resultados_db['proyectos'] = self.uploader.upload('importar_ci_proyectos', proyectos_validos)
+                update_progress("Guardando proyectos de investigación...", 94)
+                resultados_db['proyectos'] = await asyncio.to_thread(self.uploader.upload, 'importar_ci_proyectos', proyectos_validos, id_usuario=self.id_usuario)
             if grupos_validos:
-                resultados_db['grupos'] = self.uploader.upload('importar_ci_grupos', grupos_validos)
+                update_progress("Guardando grupos de investigación...", 96)
+                resultados_db['grupos'] = await asyncio.to_thread(self.uploader.upload, 'importar_ci_grupos', grupos_validos, id_usuario=self.id_usuario)
             if publicaciones_validas:
-                resultados_db['publicaciones'] = self.uploader.upload('importar_ci_publicaciones', publicaciones_validas)
+                update_progress("Guardando publicaciones científicas...", 98)
+                resultados_db['publicaciones'] = await asyncio.to_thread(self.uploader.upload, 'importar_ci_publicaciones', publicaciones_validas, id_usuario=self.id_usuario)
             if tesis_validas:
-                resultados_db['tesis'] = self.uploader.upload('importar_ci_tesis', tesis_validas)
+                update_progress("Guardando tesis de grado y posgrado...", 99)
+                resultados_db['tesis'] = await asyncio.to_thread(self.uploader.upload, 'importar_ci_tesis', tesis_validas, id_usuario=self.id_usuario)
 
         duration = time.time() - start_time
         total_records = (
@@ -521,6 +544,7 @@ class EtlProcessor:
             details=f"Procesamiento finalizado para archivo: {self.filename}"
         )
 
+        update_progress("Procesamiento y persistencia finalizados correctamente.", 100)
         return {
             "archivo": self.filename,
             "entidades_extraidas": {

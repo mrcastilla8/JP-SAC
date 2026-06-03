@@ -124,3 +124,33 @@ class GeneralSummaryResponse(BaseModel):
     convocatorias_vencimiento_critico: int
     investigadores_con_deuda_pi: int
     investigadores_con_deuda_gi: int
+
+# --- 5. Ficha Grupo ---
+class FichaGrupoMemberDetail(BaseModel):
+    dni: str
+    nombre: str
+    rol: str
+    fecha_incorporacion: str
+    estado: str
+
+class FichaGrupoProyectoDetail(BaseModel):
+    codigo: str
+    titulo: str
+    convocatoria: str
+    estado: str
+
+class FichaGrupoReportResponse(BaseModel):
+    parametros: ReportParams
+    id_grupo: int
+    codigo_grupo: str
+    nombre_grupo: str
+    siglas: Optional[str] = None
+    estado_grupo: str
+    fecha_reconocimiento: Optional[str] = None
+    lineas_investigacion: List[str] = []
+    coordinador_dni: Optional[str] = None
+    coordinador_nombre: Optional[str] = None
+    articulos_scopus: int
+    tesis_en_curso: int
+    miembros: List[FichaGrupoMemberDetail] = []
+    proyectos: List[FichaGrupoProyectoDetail] = []
