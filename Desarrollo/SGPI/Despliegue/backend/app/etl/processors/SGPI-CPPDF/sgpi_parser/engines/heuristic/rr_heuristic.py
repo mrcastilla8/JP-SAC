@@ -1,10 +1,9 @@
 import re
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
 from sgpi_parser.core.base_parser import BaseParser
 from sgpi_parser.core.models import ResolucionRectoral, MetadataRR, ProyectoRR, Integrante
 from sgpi_parser.utils.pdf_utils import get_fitz_doc, is_page_scanned, extract_page_text_ocr, extract_page_words_ocr
-from sgpi_parser.utils.string_utils import clean_text, extract_number, fuzzy_match
+from sgpi_parser.utils.string_utils import clean_text, extract_number
 
 # Listado de roles válidos para filtrado
 ROLES_VALIDOS = [

@@ -7,8 +7,15 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
+import pytest
+
+@pytest.fixture
+def anyio_backend():
+    return 'asyncio'
+
 from renacyt_connector.api import RenacytConnector
 
+@pytest.mark.anyio
 async def test_async_queries():
     print("Iniciando pruebas del conector RENACYT asíncrono...")
     connector = RenacytConnector(verify_ssl=False)
@@ -27,7 +34,7 @@ async def test_async_queries():
     try:
         res_name = await connector.search_by_name("Garcia", page_size=2)
         print(f"Total encontrados: {res_name.get('total', 0)}")
-        print(f"Primeros registros:")
+        print("Primeros registros:")
         for r in res_name.get("data", [])[:2]:
             print(f" - {r.get('nombres')} {r.get('apellido_paterno')} {r.get('apellido_materno')} (DNI: {r.get('numero_documento')})")
     except Exception as e:

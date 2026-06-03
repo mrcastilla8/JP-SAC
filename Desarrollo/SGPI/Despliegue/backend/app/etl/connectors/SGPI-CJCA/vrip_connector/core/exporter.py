@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List, Union, Dict, Any, Optional
+from typing import List, Union, Dict, Optional
 from pydantic import BaseModel
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side

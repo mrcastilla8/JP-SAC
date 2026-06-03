@@ -17,4 +17,3 @@ class BaseParser(ABC):
         Returns:
             BaseModel: Una instancia de ResolucionRectoral, Cronograma o ResultadosConcurso.
         """
-        pass

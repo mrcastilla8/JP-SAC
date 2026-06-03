@@ -60,16 +60,21 @@ settings = Settings()
 
 
 # ---------------------------------------------------------------------------
-# Palabras clave para el filtro FISI
+# Palabras clave para el filtro FISI centralizadas
 # Un registro se conserva si su columna de facultad contiene al menos una.
 # ---------------------------------------------------------------------------
-FISI_KEYWORDS = [
-    "Ingeniería de Sistemas e Informática",
-    "Ingenieria de Sistemas",
-    "FISI",
-    "Sistemas e Informática",
-    "Sistemas e Informatica",
-]
+try:
+    from app.core.faculty_config import FISI_KEYWORDS
+except ImportError:
+    FISI_KEYWORDS = [
+        "Ingeniería de Sistemas e Informática",
+        "Ingenieria de Sistemas",
+        "FISI",
+        "Sistemas e Informática",
+        "Sistemas e Informatica",
+        "ciencia de la computación", "ciencias de la computación",
+        "inteligencia artificial"
+    ]
 
 
 # ---------------------------------------------------------------------------

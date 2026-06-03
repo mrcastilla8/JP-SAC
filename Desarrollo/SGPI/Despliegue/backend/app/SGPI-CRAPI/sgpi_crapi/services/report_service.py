@@ -55,6 +55,8 @@ async def generate_report_dispatched(db: AsyncSession, params: ReportParams):
         return await generate_scientific_production_report(db, params)
     elif tipo_reporte in ["resumen general", "base de datos para poi"]:
         return await generate_general_summary_report(db, params)
+    elif tipo_reporte in ["ficha grupo", "ficha de grupo"]:
+        return await generate_ficha_grupo_report(db, params)
     else:
         raise ValueError(f"Tipo de reporte '{params.tipo_reporte}' no soportado.")
 
@@ -367,9 +369,9 @@ async def generate_general_summary_report(db: AsyncSession, params: ReportParams
     total_grupos = (await db.execute(select(func.count(GrupoInvestigacion.codigo_grupo)).where(GrupoInvestigacion.estado_grupo == 'Activo'))).scalar() or 0
     
     # 6. Investigadores SM y Deudas
-    total_sm = (await db.execute(select(func.count(Investigador.dni)).where(Investigador.investigador_sm == True))).scalar() or 0
-    deuda_pi = (await db.execute(select(func.count(Investigador.dni)).where(Investigador.tiene_deuda_pi == True))).scalar() or 0
-    deuda_gi = (await db.execute(select(func.count(Investigador.dni)).where(Investigador.tiene_deuda_gi == True))).scalar() or 0
+    total_sm = (await db.execute(select(func.count(Investigador.dni)).where(Investigador.investigador_sm))).scalar() or 0
+    deuda_pi = (await db.execute(select(func.count(Investigador.dni)).where(Investigador.tiene_deuda_pi))).scalar() or 0
+    deuda_gi = (await db.execute(select(func.count(Investigador.dni)).where(Investigador.tiene_deuda_gi))).scalar() or 0
     
     # 7. Convocatorias
     res_convocatorias = (await db.execute(select(Convocatoria.fecha_cierre).where(Convocatoria.estado_convocatoria == 'Abierta'))).scalars().all()
@@ -395,4 +397,108 @@ async def generate_general_summary_report(db: AsyncSession, params: ReportParams
         convocatorias_vencimiento_critico=vencimiento_critico,
         investigadores_con_deuda_pi=deuda_pi,
         investigadores_con_deuda_gi=deuda_gi
+    )
+
+
+async def generate_ficha_grupo_report(db: AsyncSession, params: ReportParams):
+    from app.models.domain import GrupoInvestigacion, Publicacion, Tesis
+    from sgpi_crapi.schemas.report_schemas import (
+        FichaGrupoReportResponse,
+        FichaGrupoMemberDetail,
+        FichaGrupoProyectoDetail
+    )
+    
+    id_grupo_str = params.grupo_investigacion
+    if not id_grupo_str:
+        raise ValueError("Se requiere especificar el grupo_investigacion para este reporte.")
+        
+    if id_grupo_str.isdigit():
+        stmt = select(GrupoInvestigacion).where(GrupoInvestigacion.id_grupo == int(id_grupo_str))
+    else:
+        stmt = select(GrupoInvestigacion).where(GrupoInvestigacion.codigo_grupo == id_grupo_str)
+        
+    res = await db.execute(stmt)
+    g = res.scalar_one_or_none()
+    if not g:
+        raise ValueError(f"Grupo de Investigación '{id_grupo_str}' no encontrado.")
+        
+    # Artículos Scopus
+    stmt_pub = select(func.count(Publicacion.id_publicacion)).where(
+        Publicacion.id_grupo == g.id_grupo,
+        func.lower(Publicacion.indexacion).like('%scopus%')
+    )
+    pub_count = (await db.execute(stmt_pub)).scalar() or 0
+    
+    # Tesis en Curso
+    member_dnis = [m.dni_investigador for m in g.miembro_grupo]
+    if member_dnis:
+        stmt_tesis = select(func.count(Tesis.url_cybertesis)).where(
+            Tesis.dni_asesor.in_(member_dnis)
+        )
+        tesis_count = (await db.execute(stmt_tesis)).scalar() or 0
+    else:
+        tesis_count = 0
+        
+    # Miembros
+    miembros_list = []
+    for m in g.miembro_grupo:
+        nombre = f"{m.investigador.nombres} {m.investigador.apellidos}" if m.investigador else m.dni_investigador
+        
+        # Mapeo del rol
+        rol = m.condicion_miembro
+        if m.condicion_miembro == "Coordinador":
+            rol = "Director"
+        elif m.condicion_miembro == "Titular":
+            rol = "Co-Investigador"
+        elif m.condicion_miembro == "Estudiante":
+            rol = "Tesista"
+            
+        estado = "activo" if m.estado_membresia == "Activo" else "inactivo"
+        fecha_inc = m.fecha_incorporacion.isoformat() if m.fecha_incorporacion else ""
+        
+        miembros_list.append(FichaGrupoMemberDetail(
+            dni=m.dni_investigador,
+            nombre=nombre,
+            rol=rol,
+            fecha_incorporacion=fecha_inc,
+            estado=estado
+        ))
+        
+    # Proyectos
+    proyectos_list = []
+    for p in g.proyecto:
+        estado_p = "active"
+        if p.estado_proyecto == "Formulación":
+            estado_p = "pending"
+        elif p.estado_proyecto == "Concluido":
+            estado_p = "completed"
+        elif p.estado_proyecto == "Cancelado":
+            estado_p = "cancelled"
+            
+        proyectos_list.append(FichaGrupoProyectoDetail(
+            codigo=p.codigo_proyecto,
+            titulo=p.titulo_proyecto,
+            convocatoria=str(p.anio_convocatoria or ""),
+            estado=estado_p
+        ))
+        
+    coordinador_nombre = None
+    if g.coordinador:
+        coordinador_nombre = f"{g.coordinador.nombres} {g.coordinador.apellidos}"
+        
+    return FichaGrupoReportResponse(
+        parametros=params,
+        id_grupo=g.id_grupo,
+        codigo_grupo=g.codigo_grupo,
+        nombre_grupo=g.nombre_grupo,
+        siglas=g.siglas,
+        estado_grupo=g.estado_grupo,
+        fecha_reconocimiento=g.fecha_reconocimiento.isoformat() if g.fecha_reconocimiento else None,
+        lineas_investigacion=g.lineas_investigacion or [],
+        coordinador_dni=g.dni_coordinador,
+        coordinador_nombre=coordinador_nombre,
+        articulos_scopus=pub_count,
+        tesis_en_curso=tesis_count,
+        miembros=miembros_list,
+        proyectos=proyectos_list
     )

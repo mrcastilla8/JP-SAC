@@ -1,6 +1,6 @@
 import fitz  # PyMuPDF
 import pdfplumber
-from typing import List, Dict, Any, Generator, Tuple, Optional
+from typing import List, Generator, Tuple, Optional
 from sgpi_parser.config import settings
 
 def get_fitz_doc(pdf_path: str) -> fitz.Document:
@@ -85,7 +85,7 @@ def extract_page_words_ocr(page: fitz.Page, dpi: Optional[int] = None, lang: Opt
     
     # 3. Ejecutar OCR para obtener diccionario de datos geométricos
     # psm 6 asume un bloque de texto uniforme (muy efectivo para tablas estructuradas)
-    config = f"--psm 6"
+    config = "--psm 6"
     data = pytesseract.image_to_data(img, lang=ocr_lang, config=config, output_type=pytesseract.Output.DICT)
     
     # Tesseract da las coordenadas en píxeles. Debemos reescalar a puntos de PDF (72 DPI)

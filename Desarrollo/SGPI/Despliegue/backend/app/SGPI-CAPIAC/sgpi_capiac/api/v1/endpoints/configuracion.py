@@ -1,10 +1,9 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from sgpi_capiac.crud.crud_configuracion import configuracion
 from sgpi_capiac.schemas.capiac_schemas import ConfiguracionGlobalResponse, ConfiguracionGlobalUpdate
-from app.core.security import require_admin
 
 router = APIRouter()
 

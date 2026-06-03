@@ -63,4 +63,4 @@ def generate_pdf(request: PDFGenerationRequest):
         raise HTTPException(status_code=400, detail=str(val_err))
     except Exception as e:
         logger.error(f"Error interno del motor de PDF: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error interno al preparar el archivo PDF. Intente nuevamente.")
+        raise HTTPException(status_code=500, detail="Error interno al preparar el archivo PDF. Intente nuevamente.")

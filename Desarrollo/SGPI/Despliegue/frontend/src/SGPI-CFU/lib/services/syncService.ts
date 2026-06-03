@@ -51,6 +51,7 @@ export interface SyncJobStatusData {
   finished_at?: string;
   error?: string;
   report?: Record<SyncSourceId, SyncSourceReport>;
+  progress_logs?: { time: string; level: 'INFO' | 'SUCCESS' | 'WARN' | 'ERROR'; text: string; }[];
 }
 
 export interface SourceHealth {

@@ -1,8 +1,7 @@
 from sgpi_capirestc.crud.crud_base import CRUDBase
 from app.models.domain import Usuario
-from sgpi_capiac.schemas.capiac_schemas import UsuarioBase, UsuarioCreate, UsuarioUpdate
+from sgpi_capiac.schemas.capiac_schemas import UsuarioCreate, UsuarioUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from app.core.config import settings
 from supabase import create_client, Client
 import uuid
@@ -19,6 +18,7 @@ class CRUDUsuario(CRUDBase[Usuario, UsuarioCreate, UsuarioUpdate]):
             "email": obj_in.correo_institucional,
             "password": "Unmsm2026*", # Contraseña temporal
             "email_confirm": True, # Para evitar mandar correo de confirmación de momento
+            "user_metadata": {"full_name": obj_in.nombre_completo}
         })
         
         user_id_str = auth_response.user.id
@@ -31,11 +31,13 @@ class CRUDUsuario(CRUDBase[Usuario, UsuarioCreate, UsuarioUpdate]):
                 id_usuario=user_id_uuid,
                 correo_institucional=obj_in.correo_institucional,
                 rol_sistema=obj_in.rol_sistema,
+                nombre_completo=obj_in.nombre_completo,
                 estado_cuenta=obj_in.estado_cuenta if obj_in.estado_cuenta is not None else True
             )
             db.add(db_obj)
         else:
             db_obj.rol_sistema = obj_in.rol_sistema
+            db_obj.nombre_completo = obj_in.nombre_completo
             db_obj.estado_cuenta = obj_in.estado_cuenta if obj_in.estado_cuenta is not None else True
             # No necesitamos hacer db.add(db_obj) si usamos await db.get(), ya está en la sesión
 
@@ -46,7 +48,7 @@ class CRUDUsuario(CRUDBase[Usuario, UsuarioCreate, UsuarioUpdate]):
             tipo_evento='USER_CREATED',
             entidad_afectada='usuario',
             pk_entidad=user_id_str,
-            valor_nuevo={"correo": obj_in.correo_institucional, "rol": obj_in.rol_sistema},
+            valor_nuevo={"correo": obj_in.correo_institucional, "rol": obj_in.rol_sistema, "nombre": obj_in.nombre_completo},
             id_usuario=current_user_id,
             resultado='Exito'
         )
@@ -92,5 +94,99 @@ class CRUDUsuario(CRUDBase[Usuario, UsuarioCreate, UsuarioUpdate]):
         await db.commit()
         await db.refresh(user)
         return user
+
+    async def update_usuario(self, db: AsyncSession, *, db_obj: Usuario, obj_in: UsuarioUpdate, current_user_id: uuid.UUID = None) -> Usuario:
+        valor_anterior = {
+            "rol_sistema": db_obj.rol_sistema,
+            "estado_cuenta": db_obj.estado_cuenta,
+            "nombre_completo": db_obj.nombre_completo,
+            "correo_institucional": db_obj.correo_institucional
+        }
+        
+        supabase_update = {}
+        
+        # 1. Procesar correo institucional
+        if obj_in.correo_institucional is not None and obj_in.correo_institucional != db_obj.correo_institucional:
+            db_obj.correo_institucional = obj_in.correo_institucional
+            supabase_update["email"] = obj_in.correo_institucional
+            
+        # 2. Procesar nombre completo
+        if obj_in.nombre_completo is not None and obj_in.nombre_completo != db_obj.nombre_completo:
+            db_obj.nombre_completo = obj_in.nombre_completo
+            supabase_update["user_metadata"] = {"full_name": obj_in.nombre_completo}
+            
+        # 3. Procesar contraseña nueva
+        if obj_in.contrasena is not None and obj_in.contrasena.strip() != "":
+            supabase_update["password"] = obj_in.contrasena
+            
+        # 4. Procesar rol y estado de cuenta
+        if obj_in.rol_sistema is not None:
+            db_obj.rol_sistema = obj_in.rol_sistema
+        if obj_in.estado_cuenta is not None:
+            db_obj.estado_cuenta = obj_in.estado_cuenta
+            
+        # Actualizar en Supabase Auth si hay cambios de credenciales/perfil
+        if supabase_update:
+            try:
+                supabase_admin.auth.admin.update_user_by_id(str(db_obj.id_usuario), supabase_update)
+            except Exception as e:
+                print(f"Error updating Supabase auth user: {e}")
+                
+        db.add(db_obj)
+        
+        # Registrar log de auditoría
+        from app.models.domain import LogAuditoria
+        log = LogAuditoria(
+            tipo_evento='USER_UPDATED',
+            entidad_afectada='usuario',
+            pk_entidad=str(db_obj.id_usuario),
+            valor_anterior=valor_anterior,
+            valor_nuevo={
+                "rol_sistema": db_obj.rol_sistema,
+                "estado_cuenta": db_obj.estado_cuenta,
+                "nombre_completo": db_obj.nombre_completo,
+                "correo_institucional": db_obj.correo_institucional
+            },
+            id_usuario=current_user_id,
+            resultado='Exito'
+        )
+        db.add(log)
+        
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def delete_user(self, db: AsyncSession, *, id_usuario: uuid.UUID, current_user_id: uuid.UUID = None) -> bool:
+        # 1. Obtener usuario para auditar
+        user = await self.get(db, id=id_usuario)
+        if not user:
+            return False
+        
+        email = user.correo_institucional
+        
+        # 2. Eliminar de Supabase Auth
+        try:
+            supabase_admin.auth.admin.delete_user(str(id_usuario))
+        except Exception as e:
+            # Si no existe en Supabase Auth o hay algún error, registrar e intentar borrar en BD
+            print(f"Error deleting user from Supabase Auth: {e}")
+
+        # 3. Eliminar de la base de datos SQL
+        await db.delete(user)
+
+        # Registrar log de auditoría
+        from app.models.domain import LogAuditoria
+        log = LogAuditoria(
+            tipo_evento='USER_DELETED',
+            entidad_afectada='usuario',
+            pk_entidad=str(id_usuario),
+            valor_anterior={"correo": email, "rol": user.rol_sistema},
+            id_usuario=current_user_id,
+            resultado='Exito'
+        )
+        db.add(log)
+        
+        await db.commit()
+        return True
 
 usuario = CRUDUsuario(Usuario)

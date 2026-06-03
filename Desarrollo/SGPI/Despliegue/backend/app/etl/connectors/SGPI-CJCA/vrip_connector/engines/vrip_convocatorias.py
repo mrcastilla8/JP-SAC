@@ -6,7 +6,7 @@ from colorama import Fore, Style
 
 from vrip_connector.engines.base import BaseExtractor
 from vrip_connector.core.models import ConvocatoriaModel
-from vrip_connector.utils.date_parser import parse_spanish_date, extract_deadline_from_text, calculate_days_remaining
+from vrip_connector.utils.date_parser import extract_deadline_from_text, calculate_days_remaining
 
 import tempfile
 import sys

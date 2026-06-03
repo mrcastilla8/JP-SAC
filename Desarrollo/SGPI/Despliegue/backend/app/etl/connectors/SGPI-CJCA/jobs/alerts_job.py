@@ -2,7 +2,7 @@ import os
 import sys
 import uuid
 from datetime import datetime, date, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 # Configurar variables de entorno y ruta del conector VRIP
 from dotenv import load_dotenv

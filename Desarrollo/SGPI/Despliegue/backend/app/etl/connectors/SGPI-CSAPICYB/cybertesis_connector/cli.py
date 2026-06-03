@@ -6,7 +6,6 @@ import typer
 from tabulate import tabulate
 from colorama import Fore, Style, init
 
-from cybertesis_connector.core.models import QueryResultsModel
 from cybertesis_connector.utils.helpers import format_clean_filename
 
 # Inicializar colorama para coloreado multiplataforma

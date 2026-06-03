@@ -37,6 +37,7 @@ class UsuarioBase(BaseModel):
     correo_institucional: str
     rol_sistema: str
     estado_cuenta: Optional[bool] = True
+    nombre_completo: Optional[str] = ""
 
 class UsuarioCreate(UsuarioBase):
     pass
@@ -44,6 +45,9 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioUpdate(BaseModel):
     rol_sistema: Optional[str] = None
     estado_cuenta: Optional[bool] = None
+    nombre_completo: Optional[str] = None
+    correo_institucional: Optional[str] = None
+    contrasena: Optional[str] = None
 
 class UsuarioResponse(UsuarioBase):
     id_usuario: Any
@@ -51,3 +55,29 @@ class UsuarioResponse(UsuarioBase):
     
     class Config:
         from_attributes = True
+
+class CatalogBase(BaseModel):
+    nombre: str
+    estado: Optional[str] = "Aprobado"
+
+class CatalogCreate(CatalogBase):
+    pass
+
+class CatalogUpdate(BaseModel):
+    nombre: Optional[str] = None
+    estado: Optional[str] = None
+
+class DepartamentoAcademicoResponse(CatalogBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class LineaInvestigacionResponse(CatalogBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+

@@ -1,18 +1,21 @@
 import base64
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, or_, and_, func
 from typing import List, Optional
 
 from app.db.session import get_db
-from app.models.domain import Publicacion, Tesis, InvestigadorPublicacion, Investigador, GrupoInvestigacion
+from app.core.logger import logger
+from app.models.domain import Publicacion, Tesis, Investigador, GrupoInvestigacion
 from app.core.security import get_current_user
 from app.core.audit import log_audit_event
 from sgpi_capirestc.schemas.cfpt_schemas import (
     RegistroProduccionResponse, 
     ConfirmarPayload, 
     ValidarDoiResponse,
-    GrupoInvestigacionResumen
+    GrupoInvestigacionResumen,
+    InvestigadorResumen,
+    InvestigadorVinculado
 )
 
 router = APIRouter()
@@ -44,14 +47,14 @@ async def list_producciones(
         )
         filters_pub = []
         if estado != 'todos':
-            filters_pub.append(Publicacion.estado_validacion.ilike(estado))
+            filters_pub.append(func.unaccent(Publicacion.estado_validacion).ilike(func.unaccent(estado)))
         if indexacion != 'todas':
-            filters_pub.append(Publicacion.fuente_origen.ilike(indexacion))
+            filters_pub.append(func.unaccent(Publicacion.fuente_origen).ilike(func.unaccent(indexacion)))
         if buscar:
             term = f"%{buscar}%"
             filters_pub.append(or_(
-                Publicacion.titulo_articulo.ilike(term),
-                Publicacion.doi_codigo.ilike(term)
+                func.unaccent(Publicacion.titulo_articulo).ilike(func.unaccent(term)),
+                func.unaccent(Publicacion.doi_codigo).ilike(func.unaccent(term))
             ))
         if filters_pub:
             stmt_pub = stmt_pub.where(and_(*filters_pub))
@@ -84,23 +87,38 @@ async def list_producciones(
 
     # 2. Fetch Tesis
     if tipo in ['todos', 'tesis']:
-        stmt_tes = select(Tesis)
+        stmt_tes = select(Tesis, Investigador).outerjoin(
+            Investigador, Tesis.dni_asesor == Investigador.dni
+        )
         filters_tes = []
         if estado != 'todos':
-            filters_tes.append(Tesis.estado_validacion.ilike(estado))
+            filters_tes.append(func.unaccent(Tesis.estado_validacion).ilike(func.unaccent(estado)))
         if indexacion != 'todas':
-            filters_tes.append(Tesis.fuente_origen.ilike(indexacion))
+            filters_tes.append(func.unaccent(Tesis.fuente_origen).ilike(func.unaccent(indexacion)))
         if buscar:
             term = f"%{buscar}%"
             filters_tes.append(or_(
-                Tesis.titulo_tesis.ilike(term),
-                Tesis.autor_estudiante_texto.ilike(term)
+                func.unaccent(Tesis.titulo_tesis).ilike(func.unaccent(term)),
+                func.unaccent(Tesis.autor_estudiante_texto).ilike(func.unaccent(term))
             ))
         if filters_tes:
             stmt_tes = stmt_tes.where(and_(*filters_tes))
             
         res_tes = await db.execute(stmt_tes)
-        for t in res_tes.scalars().all():
+        for t, inv in res_tes.all():
+            investigadores_vinculados = []
+            if inv:
+                investigadores_vinculados.append(
+                    InvestigadorVinculado(
+                        investigador=InvestigadorResumen(
+                            id=inv.dni,
+                            nombre=f"{inv.nombres} {inv.apellidos}",
+                            dni=inv.dni,
+                            departamento=inv.departamento_academico
+                        ),
+                        rol="Asesor"
+                    )
+                )
             resultados.append(RegistroProduccionResponse(
                 id=encode_tesis_id(t.url_cybertesis),
                 tipo="tesis",
@@ -111,7 +129,8 @@ async def list_producciones(
                 estado=t.estado_validacion.lower() if t.estado_validacion else "pendiente",
                 tipoTesis=t.tipo_trabajo,
                 urlCybertesis=t.url_cybertesis,
-                tesista=t.autor_estudiante_texto
+                tesista=t.autor_estudiante_texto,
+                investigadoresVinculados=investigadores_vinculados
             ))
 
     return resultados
@@ -153,9 +172,50 @@ async def get_produccion(id: str, db: AsyncSession = Depends(get_db), current_us
         )
     elif id.startswith("tes-"):
         url = decode_tesis_id(id)
-        t = await db.get(Tesis, url)
-        if not t:
+        stmt = select(Tesis, Investigador).outerjoin(
+            Investigador, Tesis.dni_asesor == Investigador.dni
+        ).where(Tesis.url_cybertesis == url)
+        res = await db.execute(stmt)
+        row = res.first()
+        if not row:
+            from app.core.cache import cache_get
+            cache_key = f"cybertesis:item:{id}"
+            cached_data = None
+            try:
+                cached_data = await cache_get(cache_key)
+            except Exception as cache_err:
+                logger.error(f"Error consultando cache para tesis {id}: {cache_err}")
+                
+            if cached_data:
+                return RegistroProduccionResponse(
+                    id=id,
+                    tipo="tesis",
+                    titulo=cached_data.get("titulo_tesis"),
+                    autores=cached_data.get("asesor_texto") or "Asesor no detectado",
+                    fecha=f"{cached_data.get('anio_publicacion')}-01-01" if cached_data.get("anio_publicacion") else "1970-01-01",
+                    fuente="CYBERTESIS",
+                    estado="pendiente",
+                    isExternal=True,
+                    tipoTesis=cached_data.get("tipo_trabajo"),
+                    urlCybertesis=cached_data.get("url_cybertesis"),
+                    tesista=cached_data.get("autor_estudiante_texto"),
+                    investigadoresVinculados=[]
+                )
             raise HTTPException(status_code=404, detail="Tesis no encontrada")
+        t, inv = row
+        investigadores_vinculados = []
+        if inv:
+            investigadores_vinculados.append(
+                InvestigadorVinculado(
+                    investigador=InvestigadorResumen(
+                        id=inv.dni,
+                        nombre=f"{inv.nombres} {inv.apellidos}",
+                        dni=inv.dni,
+                        departamento=inv.departamento_academico
+                    ),
+                    rol="Asesor"
+                )
+            )
         return RegistroProduccionResponse(
             id=id,
             tipo="tesis",
@@ -166,7 +226,8 @@ async def get_produccion(id: str, db: AsyncSession = Depends(get_db), current_us
             estado=t.estado_validacion.lower() if t.estado_validacion else "pendiente",
             tipoTesis=t.tipo_trabajo,
             urlCybertesis=t.url_cybertesis,
-            tesista=t.autor_estudiante_texto
+            tesista=t.autor_estudiante_texto,
+            investigadoresVinculados=investigadores_vinculados
         )
     raise HTTPException(status_code=400, detail="Formato de ID inválido")
 
@@ -230,8 +291,8 @@ async def list_grupos_investigacion(
     if query:
         term = f"%{query}%"
         stmt = stmt.where(or_(
-            GrupoInvestigacion.nombre_grupo.ilike(term),
-            GrupoInvestigacion.siglas.ilike(term)
+            func.unaccent(GrupoInvestigacion.nombre_grupo).ilike(func.unaccent(term)),
+            func.unaccent(GrupoInvestigacion.siglas).ilike(func.unaccent(term))
         ))
     res = await db.execute(stmt)
     resultados = []
