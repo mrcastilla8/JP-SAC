@@ -12364,3 +12364,77 @@ Traceback (most recent call last):
   File "C:\Users\marec\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 556, in _check_closed
     raise RuntimeError('Event loop is closed')
 RuntimeError: Event loop is closed
+[2026-06-16 12:45:56,743] [INFO] [root:logger.py:75] [Correlation-ID: -] - Centralized logging system initialized successfully.
+[2026-06-16 12:46:05,991] [INFO] [uvicorn.error:config.py:582] [Correlation-ID: -] - Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+[2026-06-16 12:46:05,992] [INFO] [uvicorn.error:basereload.py:79] [Correlation-ID: -] - Started reloader process [1924] using WatchFiles
+[2026-06-16 12:46:07,355] [INFO] [root:logger.py:75] [Correlation-ID: -] - Centralized logging system initialized successfully.
+[2026-06-16 12:46:10,470] [INFO] [uvicorn.error:server.py:92] [Correlation-ID: -] - Started server process [8080]
+[2026-06-16 12:46:10,471] [INFO] [uvicorn.error:on.py:48] [Correlation-ID: -] - Waiting for application startup.
+[2026-06-16 12:46:10,472] [INFO] [uvicorn.error:on.py:62] [Correlation-ID: -] - Application startup complete.
+[2026-06-16 12:54:13,192] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:59379 - "OPTIONS /api/v1/sync/sources/status HTTP/1.1" 200
+[2026-06-16 12:54:13,192] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:61597 - "OPTIONS /api/v1/sync/sources/status HTTP/1.1" 200
+[2026-06-16 12:54:13,203] [INFO] [sgpi.app:main.py:51] [Correlation-ID: 10ddb2c3-39ce-4260-8106-3a7f565638c5] - Incoming Request: GET /api/v1/sync/sources/status
+[2026-06-16 12:54:13,325] [INFO] [sgpi.app:main.py:57] [Correlation-ID: 10ddb2c3-39ce-4260-8106-3a7f565638c5] - Request Completed: GET /api/v1/sync/sources/status - Status: 200 - Duration: 0.122s
+[2026-06-16 12:54:13,326] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:59379 - "GET /api/v1/sync/sources/status HTTP/1.1" 200
+[2026-06-16 12:54:13,328] [INFO] [sgpi.app:main.py:51] [Correlation-ID: 996a224a-f166-4b5c-aab9-6227508e9506] - Incoming Request: GET /api/v1/sync/sources/status
+[2026-06-16 12:54:13,329] [INFO] [sgpi.app:main.py:57] [Correlation-ID: 996a224a-f166-4b5c-aab9-6227508e9506] - Request Completed: GET /api/v1/sync/sources/status - Status: 200 - Duration: 0.002s
+[2026-06-16 12:54:13,330] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:61597 - "GET /api/v1/sync/sources/status HTTP/1.1" 200
+[2026-06-16 12:54:21,616] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "OPTIONS /api/v1/investigators?page=1&limit=10 HTTP/1.1" 200
+[2026-06-16 12:54:21,619] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "OPTIONS /api/v1/investigators?page=1&limit=10 HTTP/1.1" 200
+[2026-06-16 12:54:21,622] [INFO] [sgpi.app:main.py:51] [Correlation-ID: 68e33d02-9771-4158-bff9-e2fb22141e45] - Incoming Request: GET /api/v1/investigators
+[2026-06-16 12:54:21,670] [INFO] [sgpi.app:main.py:57] [Correlation-ID: 68e33d02-9771-4158-bff9-e2fb22141e45] - Request Completed: GET /api/v1/investigators - Status: 307 - Duration: 0.049s
+[2026-06-16 12:54:21,671] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "GET /api/v1/investigators?page=1&limit=10 HTTP/1.1" 307
+[2026-06-16 12:54:21,672] [INFO] [sgpi.app:main.py:51] [Correlation-ID: ce105242-b20a-48d3-856e-e9c0c4e60da6] - Incoming Request: GET /api/v1/investigators
+[2026-06-16 12:54:21,673] [INFO] [sgpi.app:main.py:57] [Correlation-ID: ce105242-b20a-48d3-856e-e9c0c4e60da6] - Request Completed: GET /api/v1/investigators - Status: 307 - Duration: 0.001s
+[2026-06-16 12:54:21,673] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "GET /api/v1/investigators?page=1&limit=10 HTTP/1.1" 307
+[2026-06-16 12:54:21,674] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "OPTIONS /api/v1/investigators/?page=1&limit=10 HTTP/1.1" 200
+[2026-06-16 12:54:21,676] [INFO] [sgpi.app:main.py:51] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - Incoming Request: GET /api/v1/investigators/
+[2026-06-16 12:54:22,568] [INFO] [sgpi.app:investigators.py:134] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - Search query triggered: buscar=None, departamento=None, nivelRenacyt=None, estado=None, page=1, limit=10
+[2026-06-16 12:54:23,207] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - select pg_catalog.version()
+[2026-06-16 12:54:23,207] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - [raw sql] ()
+[2026-06-16 12:54:23,494] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - select current_schema()
+[2026-06-16 12:54:23,495] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - [raw sql] ()
+[2026-06-16 12:54:23,873] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - show standard_conforming_strings
+[2026-06-16 12:54:23,874] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - [raw sql] ()
+[2026-06-16 12:54:24,159] [INFO] [sqlalchemy.engine.Engine:base.py:2712] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - BEGIN (implicit)
+[2026-06-16 12:54:24,183] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - SELECT count(investigador.dni) AS count_1 
+FROM investigador
+[2026-06-16 12:54:24,184] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - [generated in 0.00064s] ()
+[2026-06-16 12:54:24,473] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - SELECT investigador.dni, investigador.nombres, investigador.apellidos, investigador.codigo_interno_vrip, investigador.condicion_laboral, investigador.departamento_academico, investigador.facultad_dependencia, investigador.grado_academico_max, investigador.institucion_principal, investigador.codigo_renacyt, investigador.orcid, investigador.categoria_renacyt, investigador.estado_renacyt, investigador.url_cti_vitae, investigador.investigador_sm, investigador.estado_vigencia, investigador.tiene_deuda_gi, investigador.tiene_deuda_pi, investigador.is_external, investigador.created_at, investigador.updated_at 
+FROM investigador ORDER BY investigador.apellidos ASC 
+ LIMIT $1::INTEGER OFFSET $2::INTEGER
+[2026-06-16 12:54:24,473] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - [generated in 0.00077s] (10, 0)
+[2026-06-16 12:54:24,672] [INFO] [sgpi.app:main.py:57] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - Request Completed: GET /api/v1/investigators/ - Status: 200 - Duration: 2.995s
+[2026-06-16 12:54:24,672] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "GET /api/v1/investigators/?page=1&limit=10 HTTP/1.1" 200
+[2026-06-16 12:54:24,673] [INFO] [sqlalchemy.engine.Engine:base.py:2715] [Correlation-ID: 542cc3c0-3ee2-49d3-94d4-fcbbbc561ae4] - ROLLBACK
+[2026-06-16 12:54:24,674] [INFO] [sgpi.app:main.py:51] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - Incoming Request: GET /api/v1/investigators/
+[2026-06-16 12:54:24,677] [INFO] [sgpi.app:investigators.py:134] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - Search query triggered: buscar=None, departamento=None, nivelRenacyt=None, estado=None, page=1, limit=10
+[2026-06-16 12:54:25,329] [INFO] [sqlalchemy.engine.Engine:base.py:2712] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - BEGIN (implicit)
+[2026-06-16 12:54:25,330] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - SELECT count(investigador.dni) AS count_1 
+FROM investigador
+[2026-06-16 12:54:25,331] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - [cached since 1.148s ago] ()
+[2026-06-16 12:54:25,615] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - SELECT investigador.dni, investigador.nombres, investigador.apellidos, investigador.codigo_interno_vrip, investigador.condicion_laboral, investigador.departamento_academico, investigador.facultad_dependencia, investigador.grado_academico_max, investigador.institucion_principal, investigador.codigo_renacyt, investigador.orcid, investigador.categoria_renacyt, investigador.estado_renacyt, investigador.url_cti_vitae, investigador.investigador_sm, investigador.estado_vigencia, investigador.tiene_deuda_gi, investigador.tiene_deuda_pi, investigador.is_external, investigador.created_at, investigador.updated_at 
+FROM investigador ORDER BY investigador.apellidos ASC 
+ LIMIT $1::INTEGER OFFSET $2::INTEGER
+[2026-06-16 12:54:25,615] [INFO] [sqlalchemy.engine.Engine:base.py:1848] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - [cached since 1.143s ago] (10, 0)
+[2026-06-16 12:54:25,806] [INFO] [sgpi.app:main.py:57] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - Request Completed: GET /api/v1/investigators/ - Status: 200 - Duration: 1.132s
+[2026-06-16 12:54:25,807] [INFO] [uvicorn.access:httptools_impl.py:484] [Correlation-ID: -] - 127.0.0.1:51762 - "GET /api/v1/investigators/?page=1&limit=10 HTTP/1.1" 200
+[2026-06-16 12:54:25,807] [INFO] [sqlalchemy.engine.Engine:base.py:2715] [Correlation-ID: c2734022-7b6d-4f46-b366-10f8e274ff29] - ROLLBACK
+[2026-06-16 13:20:45,086] [INFO] [watchfiles.main:main.py:309] [Correlation-ID: -] - 1 change detected
+[2026-06-16 13:21:05,832] [INFO] [watchfiles.main:main.py:309] [Correlation-ID: -] - 42 changes detected
+[2026-06-16 13:21:05,847] [WARNING] [uvicorn.error:basereload.py:54] [Correlation-ID: -] - WatchFiles detected changes in '.venv\Lib\site-packages\pyflakes\test\harness.py', '.venv\Lib\site-packages\pyflakes\test\__init__.py', '.venv\Lib\site-packages\pyflakes\checker.py', '.venv\Lib\site-packages\pyflakes\test\test_api.py', '.venv\Lib\site-packages\pyflakes\test\test_code_segment.py', '.venv\Lib\site-packages\pyflakes\api.py', '.venv\Lib\site-packages\pyflakes\test\test_is_literal.py', '.venv\Lib\site-packages\pyflakes\messages.py', '.venv\Lib\site-packages\pyflakes\scripts\pyflakes.py', '.venv\Lib\site-packages\pyflakes\test\test_match.py', '.venv\Lib\site-packages\pyflakes\test\test_undefined_names.py', '.venv\Lib\site-packages\pyflakes\test\test_doctests.py', '.venv\Lib\site-packages\pyflakes\reporter.py', '.venv\Lib\site-packages\pyflakes\test\test_builtin.py', '.venv\Lib\site-packages\pyflakes\scripts\__init__.py', '.venv\Lib\site-packages\pyflakes\test\test_imports.py', '.venv\Lib\site-packages\pyflakes\__main__.py', '.venv\Lib\site-packages\pyflakes\test\test_dict.py', '.venv\Lib\site-packages\pyflakes\__init__.py', '.venv\Lib\site-packages\pyflakes\test\test_other.py', '.venv\Lib\site-packages\pyflakes\test\test_type_annotations.py'. Reloading...
+[2026-06-16 13:21:05,899] [INFO] [uvicorn.error:server.py:272] [Correlation-ID: -] - Shutting down
+[2026-06-16 13:21:06,007] [INFO] [uvicorn.error:on.py:67] [Correlation-ID: -] - Waiting for application shutdown.
+[2026-06-16 13:21:07,001] [INFO] [uvicorn.error:on.py:76] [Correlation-ID: -] - Application shutdown complete.
+[2026-06-16 13:21:07,003] [INFO] [uvicorn.error:server.py:102] [Correlation-ID: -] - Finished server process [8080]
+[2026-06-16 13:21:09,200] [INFO] [watchfiles.main:main.py:309] [Correlation-ID: -] - 270 changes detected
+[2026-06-16 13:21:09,235] [WARNING] [uvicorn.error:basereload.py:54] [Correlation-ID: -] - WatchFiles detected changes in '.venv\Lib\site-packages\flake8\__init__.py', '.venv\Lib\site-packages\flake8\formatting\_windows_color.py', '.venv\Lib\site-packages\flake8\api\__init__.py', '.venv\Lib\site-packages\flake8\options\manager.py', '.venv\Lib\site-packages\flake8\main\cli.py', '.venv\Lib\site-packages\flake8\utils.py', '.venv\Lib\site-packages\mccabe.py', '.venv\Lib\site-packages\flake8\plugins\reporter.py', '.venv\Lib\site-packages\flake8\__main__.py', '.venv\Lib\site-packages\flake8\main\__init__.py', '.venv\Lib\site-packages\pycodestyle.py', '.venv\Lib\site-packages\flake8\formatting\default.py', '.venv\Lib\site-packages\flake8\plugins\finder.py', '.venv\Lib\site-packages\flake8\violation.py', '.venv\Lib\site-packages\flake8\main\application.py', '.venv\Lib\site-packages\flake8\options\aggregator.py', '.venv\Lib\site-packages\flake8\checker.py', '.venv\Lib\site-packages\flake8\plugins\__init__.py', '.venv\Lib\site-packages\flake8\_compat.py', '.venv\Lib\site-packages\flake8\api\legacy.py', '.venv\Lib\site-packages\flake8\exceptions.py', '.venv\Lib\site-packages\flake8\main\options.py', '.venv\Lib\site-packages\flake8\formatting\base.py', '.venv\Lib\site-packages\flake8\options\parse_args.py', '.venv\Lib\site-packages\flake8\plugins\pyflakes.py', '.venv\Lib\site-packages\flake8\discover_files.py', '.venv\Lib\site-packages\flake8\options\__init__.py', '.venv\Lib\site-packages\flake8\options\config.py', '.venv\Lib\site-packages\flake8\plugins\pycodestyle.py', '.venv\Lib\site-packages\flake8\style_guide.py', '.venv\Lib\site-packages\flake8\statistics.py', '.venv\Lib\site-packages\flake8\formatting\__init__.py', '.venv\Lib\site-packages\flake8\processor.py', '.venv\Lib\site-packages\flake8\defaults.py', '.venv\Lib\site-packages\flake8\main\debug.py'. Reloading...
+[2026-06-16 13:21:11,879] [INFO] [root:logger.py:75] [Correlation-ID: -] - Centralized logging system initialized successfully.
+[2026-06-16 13:21:18,135] [INFO] [uvicorn.error:server.py:92] [Correlation-ID: -] - Started server process [25292]
+[2026-06-16 13:21:18,136] [INFO] [uvicorn.error:on.py:48] [Correlation-ID: -] - Waiting for application startup.
+[2026-06-16 13:21:18,136] [INFO] [uvicorn.error:on.py:62] [Correlation-ID: -] - Application startup complete.
+[2026-06-16 13:23:25,027] [INFO] [uvicorn.error:server.py:272] [Correlation-ID: -] - Shutting down
+[2026-06-16 13:23:25,135] [INFO] [uvicorn.error:on.py:67] [Correlation-ID: -] - Waiting for application shutdown.
+[2026-06-16 13:23:25,224] [INFO] [uvicorn.error:on.py:76] [Correlation-ID: -] - Application shutdown complete.
+[2026-06-16 13:23:25,224] [INFO] [uvicorn.error:server.py:102] [Correlation-ID: -] - Finished server process [25292]
+[2026-06-16 13:23:25,664] [INFO] [uvicorn.error:basereload.py:115] [Correlation-ID: -] - Stopping reloader process [1924]
