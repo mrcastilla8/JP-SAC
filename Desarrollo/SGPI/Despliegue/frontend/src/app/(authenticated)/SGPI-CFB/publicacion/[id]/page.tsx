@@ -127,7 +127,7 @@ export default function PublicacionDetailPage() {
           </button>
           <ChevronRightIcon />
           <span>Búsqueda</span>
-          {query && <><ChevronRightIcon /><span className="text-on-surface">"{query}"</span></>}
+          {query && <><ChevronRightIcon /><span className="text-on-surface">&quot;{query}&quot;</span></>}
           <ChevronRightIcon />
           <span className="text-on-surface font-medium truncate max-w-[200px]">{pub.id}</span>
         </nav>

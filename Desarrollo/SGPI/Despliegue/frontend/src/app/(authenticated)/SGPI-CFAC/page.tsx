@@ -547,7 +547,7 @@ export default function AlertasConvocatoriasPage() {
     }
   }, []);
 
-  useEffect(() => { cargar(filtros); }, []);
+  useEffect(() => { cargar(filtros); }, [cargar, filtros]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 

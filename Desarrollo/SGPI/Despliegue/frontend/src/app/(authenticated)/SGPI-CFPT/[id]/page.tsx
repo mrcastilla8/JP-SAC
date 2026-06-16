@@ -169,14 +169,14 @@ function BuscarInvestigadorModal({
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); buscar(''); }, []);
-
-  const buscar = async (query: string) => {
+  const buscar = useCallback(async (query: string) => {
     setLoading(true);
     const res = await buscarInvestigadores(query);
     setResultados(res.filter((r) => !excluirIds.includes(r.id)));
     setLoading(false);
-  };
+  }, [excluirIds]);
+
+  useEffect(() => { inputRef.current?.focus(); buscar(''); }, [buscar]);
 
   const handleChange = (v: string) => { setQ(v); buscar(v); };
 
@@ -252,14 +252,14 @@ function BuscarGrupoModal({
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); buscar(''); }, []);
-
-  const buscar = async (query: string) => {
+  const buscar = useCallback(async (query: string) => {
     setLoading(true);
     const res = await buscarGrupos(query);
     setResultados(res);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => { inputRef.current?.focus(); buscar(''); }, [buscar]);
 
   const handleChange = (v: string) => { setQ(v); buscar(v); };
 

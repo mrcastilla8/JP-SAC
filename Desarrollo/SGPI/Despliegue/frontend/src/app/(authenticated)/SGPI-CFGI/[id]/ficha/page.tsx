@@ -425,7 +425,7 @@ export default function FichaGrupoPage() {
                           </p>
                           {t.resumen_abstract && (
                             <p className="font-sans text-[11px] text-[#64748b] mt-1.5 line-clamp-2 leading-relaxed italic text-left">
-                              "{t.resumen_abstract}"
+                              &quot;{t.resumen_abstract}&quot;
                             </p>
                           )}
                         </div>
