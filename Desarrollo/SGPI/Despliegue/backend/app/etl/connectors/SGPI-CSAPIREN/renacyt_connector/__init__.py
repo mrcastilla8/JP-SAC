@@ -4,13 +4,9 @@ A robust, zero-dependency Python connector to interact with the Peru CONCYTEC RE
 Exposes both an object-oriented client and convenient single-lookup utility functions.
 """
 
-from renacyt_connector.api import (
-    RenacytConnector,
-    RenacytError,
-    RenacytConnectionError,
-    RenacytAPIError
-)
+from renacyt_connector.api import RenacytConnector, RenacytError, RenacytConnectionError, RenacytAPIError
 from renacyt_connector.utils import extract_lastnames
+
 
 # Convenient, high-level package functions for quick lookups
 async def search_by_dni(dni, verify_ssl=False):
@@ -21,6 +17,7 @@ async def search_by_dni(dni, verify_ssl=False):
     client = RenacytConnector(verify_ssl=verify_ssl)
     return await client.search_by_dni(dni)
 
+
 async def search_by_orcid(orcid, verify_ssl=False):
     """
     Looks up a researcher by ORCID identifier.
@@ -28,6 +25,7 @@ async def search_by_orcid(orcid, verify_ssl=False):
     """
     client = RenacytConnector(verify_ssl=verify_ssl)
     return await client.search_by_orcid(orcid)
+
 
 async def search_by_codigo(code, verify_ssl=False):
     """
@@ -37,6 +35,7 @@ async def search_by_codigo(code, verify_ssl=False):
     client = RenacytConnector(verify_ssl=verify_ssl)
     return await client.search_by_codigo(code)
 
+
 async def search_by_name(name, page=1, page_size=10, verify_ssl=False):
     """
     Searches for researchers by partial full name matching.
@@ -44,6 +43,7 @@ async def search_by_name(name, page=1, page_size=10, verify_ssl=False):
     """
     client = RenacytConnector(verify_ssl=verify_ssl)
     return await client.search_by_name(name, page=page, page_size=page_size)
+
 
 async def search_by_institution(institution, page=1, page_size=10, verify_ssl=False):
     """
@@ -53,6 +53,7 @@ async def search_by_institution(institution, page=1, page_size=10, verify_ssl=Fa
     client = RenacytConnector(verify_ssl=verify_ssl)
     return await client.search_by_institution(institution, page=page, page_size=page_size)
 
+
 async def search_by_lastname(lastname, page=1, page_size=10, verify_ssl=False):
     """
     Searches for researchers by partial last name matching.
@@ -61,16 +62,17 @@ async def search_by_lastname(lastname, page=1, page_size=10, verify_ssl=False):
     client = RenacytConnector(verify_ssl=verify_ssl)
     return await client.search_by_lastname(lastname, page=page, page_size=page_size)
 
+
 __all__ = [
-    'RenacytConnector',
-    'RenacytError',
-    'RenacytConnectionError',
-    'RenacytAPIError',
-    'search_by_dni',
-    'search_by_orcid',
-    'search_by_codigo',
-    'search_by_name',
-    'search_by_institution',
-    'search_by_lastname',
-    'extract_lastnames'
+    "RenacytConnector",
+    "RenacytError",
+    "RenacytConnectionError",
+    "RenacytAPIError",
+    "search_by_dni",
+    "search_by_orcid",
+    "search_by_codigo",
+    "search_by_name",
+    "search_by_institution",
+    "search_by_lastname",
+    "extract_lastnames",
 ]

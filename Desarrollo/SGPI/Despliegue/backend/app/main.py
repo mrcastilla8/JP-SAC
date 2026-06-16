@@ -20,22 +20,23 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "SGPI-CRAPI"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "SGPI-CMEE"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "SGPI-CAPIAC"))
 
-from app.core.config import settings
-from app.core.logger import setup_logging, correlation_id, logger
+from app.core.config import settings  # noqa: E402
+from app.core.logger import setup_logging, correlation_id, logger  # noqa: E402
 
 # Inicializar configuración de logging centralizada
 setup_logging()
 
-from app.db.session import engine
-from sgpi_capirestc.api.v1.api import api_router
-from sgpi_cmr.api.reconciliation import router as cmr_router
-from sgpi_crapi.api.v1.api import api_router as crapi_router
-from sgpi_cmee.api.v1.api import api_router as cmee_router
-from sgpi_capiac.api.v1.api import api_router as capiac_router
+from app.db.session import engine  # noqa: E402
+from sgpi_capirestc.api.v1.api import api_router  # noqa: E402
+from sgpi_cmr.api.reconciliation import router as cmr_router  # noqa: E402
+from sgpi_crapi.api.v1.api import api_router as crapi_router  # noqa: E402
+from sgpi_cmee.api.v1.api import api_router as cmee_router  # noqa: E402
+from sgpi_capiac.api.v1.api import api_router as capiac_router  # noqa: E402
 
 # Importar rutas de CMEPDF añadiéndolo temporalmente al sys.path por nombre de carpeta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "SGPI-CMEPDF"))
-from api.routes import router as cmepdf_router
+from api.routes import router as cmepdf_router  # noqa: E402
+
 sys.path.pop(0)
 
 
@@ -47,11 +48,11 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         corr_id = request.headers.get("X-Correlation-ID")
         if not corr_id:
             corr_id = str(uuid.uuid4())
-            
+
         token = correlation_id.set(corr_id)
         start_time = time.time()
         logger.info(f"Incoming Request: {request.method} {request.url.path}")
-        
+
         try:
             response = await call_next(request)
             response.headers["X-Correlation-ID"] = corr_id
@@ -66,7 +67,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             logger.error(
                 f"Request Failed: {request.method} {request.url.path} - "
                 f"Exception: {type(exc).__name__}: {str(exc)} - Duration: {duration:.3f}s",
-                exc_info=True
+                exc_info=True,
             )
             raise exc
         finally:
@@ -83,14 +84,14 @@ async def lifespan(app: FastAPI):
     yield
     # shutdown — libera todas las conexiones del pool
     await engine.dispose()
-    
+
     # Cerrar pool de Redis
     try:
         from app.core.cache import close_redis
+
         await close_redis()
     except Exception as exc:
         logger.error(f"Error closing Redis connection on shutdown: {exc}", exc_info=True)
-
 
 
 # ---------------------------------------------------------------------------

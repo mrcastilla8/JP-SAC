@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, Text, Numeric, Date, DateTime, J
 # Reutilizar el Base definido en connection
 from db.connection import Base
 
+
 class Convocatoria(Base):
     __tablename__ = "convocatoria"
 
