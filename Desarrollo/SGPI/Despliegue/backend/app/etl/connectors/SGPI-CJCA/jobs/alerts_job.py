@@ -58,11 +58,16 @@ class AlertsJob:
 
         target_year = year if year else date.today().year
         print(
-            f"\n{Fore.CYAN}{Style.BRIGHT}=== INICIANDO JOB DE SEMAFORIZACIÓN DE ALERTAS (VRIP {target_year}) ==={Style.RESET_ALL}"
+            f"\n{Fore.CYAN}{Style.BRIGHT}"
+            f"=== INICIANDO JOB DE SEMAFORIZACIÓN DE ALERTAS (VRIP {target_year}) ==="
+            f"{Style.RESET_ALL}"
         )
 
         if VripConvocatoriasExtractor is None:
-            err_msg = f"No se pudo cargar el extractor de VRIP. Verifique VRIP_CONNECTOR_PATH en su archivo .env. Ruta: {vrip_path}"
+            err_msg = (
+                f"No se pudo cargar el extractor de VRIP. "
+                f"Verifique VRIP_CONNECTOR_PATH en su archivo .env. Ruta: {vrip_path}"
+            )
             print(f"{Fore.RED}[JOB ERROR] {err_msg}{Style.RESET_ALL}")
             self._log_execution(resultado="Error", detalle_error=err_msg, stats=stats)
             return {"resultado": "Error", "detalle": err_msg}
@@ -95,7 +100,9 @@ class AlertsJob:
                         # Fallback seguro para cumplir la restricción NOT NULL de fecha_cierre
                         parsed_close_date = date.today() + timedelta(days=30)
                         print(
-                            f"{Fore.YELLOW}[Reconciliación] Advertencia: Convocatoria '{conv_model.titulo[:40]}' sin fecha parseable. Usando default de 30 días a futuro.{Style.RESET_ALL}"
+                            f"{Fore.YELLOW}[Reconciliación] Advertencia: "
+                            f"Convocatoria '{conv_model.titulo[:40]}' sin fecha parseable. "
+                            f"Usando default de 30 días a futuro.{Style.RESET_ALL}"
                         )
 
                     # Resolver el estado de la convocatoria
@@ -120,16 +127,24 @@ class AlertsJob:
                         # A) Historización del Cronograma (CU12) si cambia la fecha de cierre
                         if existing_conv.fecha_cierre != parsed_close_date:
                             print(
-                                f"{Fore.YELLOW}[Historización Cronograma] Cambio de fecha detectado para '{existing_conv.titulo_convocatoria[:30]}...': {existing_conv.fecha_cierre} -> {parsed_close_date}{Style.RESET_ALL}"
+                                f"{Fore.YELLOW}[Historización Cronograma] "
+                                f"Cambio de fecha detectado para '{existing_conv.titulo_convocatoria[:30]}...': "
+                                f"{existing_conv.fecha_cierre} -> {parsed_close_date}{Style.RESET_ALL}"
                             )
 
                             historial = existing_conv.cambios_cronograma
                             if not isinstance(historial, list):
                                 historial = []
 
-                            motivo = "Ampliación de cronograma detectada automáticamente en la sincronización en vivo del VRIP"
+                            motivo = (
+                                "Ampliación de cronograma detectada automáticamente "
+                                "en la sincronización en vivo del VRIP"
+                            )
                             if parsed_close_date < existing_conv.fecha_cierre:
-                                motivo = "Adelanto de fecha de cierre detectado automáticamente en la sincronización en vivo del VRIP"
+                                motivo = (
+                                    "Adelanto de fecha de cierre detectado automáticamente "
+                                    "en la sincronización en vivo del VRIP"
+                                )
 
                             # Registrar el cambio en la auditoría del cronograma
                             historial.append(
@@ -158,7 +173,8 @@ class AlertsJob:
                         if is_modified:
                             stats["registros_actualizados"] += 1
                             print(
-                                f"{Fore.GREEN}[Actualizado] '{existing_conv.titulo_convocatoria[:40]}...'{Style.RESET_ALL}"
+                                f"{Fore.GREEN}[Actualizado] "
+                                f"'{existing_conv.titulo_convocatoria[:40]}...'{Style.RESET_ALL}"
                             )
                         else:
                             print(f"[Sin Cambios] '{existing_conv.titulo_convocatoria[:40]}...' ya está actualizada.")
@@ -169,7 +185,8 @@ class AlertsJob:
                             titulo_convocatoria=conv_model.titulo,
                             entidad_emisora="VRIP-UNMSM",
                             presupuesto_maximo=None,  # Poblado manualmente por Secretaria o parseado en el futuro
-                            fecha_inicio_inscripcion=date.today(),  # Para cumplir el NOT NULL. Preservado en futuras ejecuciones
+                            # Para cumplir el NOT NULL. Preservado en futuras ejecuciones
+                            fecha_inicio_inscripcion=date.today(),
                             fecha_cierre=parsed_close_date,
                             url_bases_vrip=conv_model.enlace,
                             cambios_cronograma=[],  # Vacío por ser primer registro
@@ -178,20 +195,27 @@ class AlertsJob:
                         self.db.add(new_conv)
                         stats["registros_creados"] += 1
                         print(
-                            f"{Fore.GREEN}{Style.BRIGHT}[Creado] Nueva convocatoria: '{conv_model.titulo[:40]}...'{Style.RESET_ALL}"
+                            f"{Fore.GREEN}{Style.BRIGHT}[Creado] "
+                            f"Nueva convocatoria: '{conv_model.titulo[:40]}...'{Style.RESET_ALL}"
                         )
 
                 except Exception as row_error:
                     stats["errores_procesamiento"] += 1
                     print(
-                        f"{Fore.RED}[Fila Error] Error al procesar convocatoria '{conv_model.titulo[:40]}...': {row_error}{Style.RESET_ALL}"
+                        f"{Fore.RED}[Fila Error] Error al procesar convocatoria "
+                        f"'{conv_model.titulo[:40]}...': {row_error}{Style.RESET_ALL}"
                     )
                     continue
 
             # Confirmar los cambios en la base de datos
             self.db.commit()
 
-            summary_msg = f"Sincronización finalizada con éxito. Creados: {stats['registros_creados']}, Actualizados: {stats['registros_actualizados']}, Procesados: {stats['registros_procesados']}, Errores: {stats['errores_procesamiento']}"
+            summary_msg = (
+                f"Sincronización finalizada con éxito. Creados: {stats['registros_creados']}, "
+                f"Actualizados: {stats['registros_actualizados']}, "
+                f"Procesados: {stats['registros_procesados']}, "
+                f"Errores: {stats['errores_procesamiento']}"
+            )
             print(f"\n{Fore.GREEN}{Style.BRIGHT}=== {summary_msg} ==={Style.RESET_ALL}")
 
             # Registrar auditoría append-only

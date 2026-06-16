@@ -71,7 +71,8 @@ class HeuristicCronogramaParser(BaseParser):
             if best_line_idx + 1 < len(text_lines):
                 next_line = text_lines[best_line_idx + 1]
                 next_lower = next_line.lower()
-                # If next line is not an activity, not a bullet, and looks like a continuation (e.g. uppercase or contains years or parentheses)
+                # If next line is not an activity, not a bullet, and looks like a
+                # continuation (e.g. uppercase or contains years or parentheses)
                 if (
                     len(next_line) > 5 and
                     not any(next_line.strip().startswith(bullet) for bullet in ["", "\uf076", "•", "*", "-", "·"]) and

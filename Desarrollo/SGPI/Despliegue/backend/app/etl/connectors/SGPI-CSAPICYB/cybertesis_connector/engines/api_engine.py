@@ -103,7 +103,8 @@ class CybertesisAPIEngine:
 
             if not quiet:
                 print(
-                    f"[Cybertesis API] Procesando página {page + 1}/{total_pages} (Encontrados {len(objects)} registros)..."
+                    f"[Cybertesis API] Procesando página {page + 1}/{total_pages} "
+                    f"(Encontrados {len(objects)} registros)..."
                 )
 
             for obj in objects:

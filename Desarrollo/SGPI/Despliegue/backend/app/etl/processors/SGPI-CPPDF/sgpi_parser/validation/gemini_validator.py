@@ -84,7 +84,8 @@ def generate_golden_dataset(pdf_path: str) -> BaseModel:
             "Eres un analista de datos experto en investigación universitaria. "
             "Analiza el PDF adjunto que contiene el Cronograma de Actividades de una convocatoria de investigación. "
             "Extrae todas las fases y actividades del cronograma. "
-            "Para cada actividad, debes extraer la descripción de la actividad, la dependencia responsable (si se menciona), "
+            "Para cada actividad, debes extraer la descripción de la actividad, "
+            "la dependencia responsable (si se menciona), "
             "la fecha_detalle original exacta que aparece en el texto, y calcular/formatear de forma precisa "
             "la fecha_inicio y fecha_fin en formato 'YYYY-MM-DD'. Si la fecha es única (ej. 19 de noviembre de 2025), "
             "fecha_inicio y fecha_fin deben ser iguales."
@@ -95,8 +96,10 @@ def generate_golden_dataset(pdf_path: str) -> BaseModel:
             "Eres un analista de datos experto en investigación universitaria. "
             "Analiza el PDF adjunto que contiene los Resultados del Concurso de Proyectos de Investigación. "
             "Extrae la lista completa de todos los proyectos aprobados que aparecen en las tablas del documento. "
-            "Para cada proyecto, extrae el orden_merito (número), el título completo del proyecto (limpia los cortes de línea "
-            "y hazlo continuo), el código de proyecto (si se menciona, ej. B2510001M), el nombre de GI (Grupo de Investigación), "
+            "Para cada proyecto, extrae el orden_merito (número), "
+            "el título completo del proyecto (limpia los cortes de línea "
+            "y hazlo continuo), el código de proyecto (si se menciona, ej. B2510001M), "
+            "el nombre de GI (Grupo de Investigación), "
             "el investigador responsable (nombres completos), la facultad de origen, y el puntaje obtenido."
         )
     elif category == "resolucion":
@@ -107,9 +110,11 @@ def generate_golden_dataset(pdf_path: str) -> BaseModel:
             "Extrae el número de resolución, la fecha de emisión y el año académico en los metadatos. "
             "Extrae la lista completa de todos los proyectos de investigación ganadores y la lista completa de "
             "sus integrantes o miembros participantes de las tablas del anexo. "
-            "Para cada integrante, identifica claramente su rol (ej. Responsable, Co-responsable, Miembro docente, Tesista, etc.), "
+            "Para cada integrante, identifica claramente su rol "
+            "(ej. Responsable, Co-responsable, Miembro docente, Tesista, etc.), "
             "su código de miembro, nombre completo, tipo de miembro (docente, estudiante, externo, etc.), facultad, "
-            "código del grupo de investigación (gi_codigo) al que pertenece, y su condición en el GI (gi_condicion, ej. Titular, Adherente)."
+            "código del grupo de investigación (gi_codigo) al que pertenece, "
+            "y su condición en el GI (gi_condicion, ej. Titular, Adherente)."
         )
     else:
         raise ValueError(f"Categoría '{category}' no soportada para validación con IA.")
