@@ -1,9 +1,9 @@
 import uuid
 from sqlalchemy import Column, Integer, String, Text, Numeric, Date, DateTime, JSON, UUID, func
-from sqlalchemy.orm import declarative_base
 
 # Reutilizar el Base definido en connection
 from db.connection import Base
+
 
 class Convocatoria(Base):
     __tablename__ = "convocatoria"

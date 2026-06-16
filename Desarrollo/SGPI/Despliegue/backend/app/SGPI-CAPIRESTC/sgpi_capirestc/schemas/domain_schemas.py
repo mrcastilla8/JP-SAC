@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Any
 from datetime import date, datetime
+
 
 class InvestigadorBase(BaseModel):
     dni: str
@@ -9,19 +10,21 @@ class InvestigadorBase(BaseModel):
     codigo_interno_vrip: Optional[str] = None
     condicion_laboral: Optional[str] = None
     departamento_academico: str
-    facultad_dependencia: Optional[str] = 'Ingeniería de Sistemas e Informática'
+    facultad_dependencia: Optional[str] = "Ingeniería de Sistemas e Informática"
     grado_academico_max: Optional[str] = None
     institucion_principal: Optional[str] = None
     codigo_renacyt: Optional[str] = None
     orcid: Optional[str] = None
-    categoria_renacyt: Optional[str] = 'No Clasificado'
+    categoria_renacyt: Optional[str] = "No Clasificado"
     estado_renacyt: Optional[str] = None
     url_cti_vitae: Optional[str] = None
     investigador_sm: Optional[bool] = False
-    estado_vigencia: Optional[str] = 'Activo'
+    estado_vigencia: Optional[str] = "Activo"
+
 
 class InvestigadorCreate(InvestigadorBase):
     pass
+
 
 class InvestigadorUpdate(BaseModel):
     nombres: Optional[str] = None
@@ -40,31 +43,35 @@ class InvestigadorUpdate(BaseModel):
     tiene_deuda_gi: Optional[bool] = None
     tiene_deuda_pi: Optional[bool] = None
 
+
 class InvestigadorResponse(InvestigadorBase):
     tiene_deuda_gi: bool
     tiene_deuda_pi: bool
     created_at: datetime
     updated_at: datetime
     is_external: Optional[bool] = False
-    
+
     class Config:
         from_attributes = True
+
 
 class GrupoInvestigacionBase(BaseModel):
     codigo_grupo: str
     nombre_grupo: str
     siglas: Optional[str] = None
     descripcion: Optional[str] = None
-    facultad: Optional[str] = 'Ingeniería de Sistemas e Informática'
+    facultad: Optional[str] = "Ingeniería de Sistemas e Informática"
     dni_coordinador: Optional[str] = None
     correo_coordinador: Optional[str] = None
     lineas_investigacion: Optional[List[str]] = None
     fecha_reconocimiento: Optional[date] = None
     url_vrip: Optional[str] = None
-    estado_grupo: Optional[str] = 'Activo'
+    estado_grupo: Optional[str] = "Activo"
+
 
 class GrupoInvestigacionCreate(GrupoInvestigacionBase):
     pass
+
 
 class GrupoInvestigacionUpdate(BaseModel):
     nombre_grupo: Optional[str] = None
@@ -78,31 +85,37 @@ class GrupoInvestigacionUpdate(BaseModel):
     url_vrip: Optional[str] = None
     estado_grupo: Optional[str] = None
 
+
 class GrupoInvestigacionResponse(GrupoInvestigacionBase):
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
 
 class UsuarioBase(BaseModel):
     correo_institucional: str
     rol_sistema: str
     estado_cuenta: Optional[bool] = True
 
+
 class UsuarioCreate(UsuarioBase):
     pass
+
 
 class UsuarioUpdate(BaseModel):
     correo_institucional: Optional[str] = None
     rol_sistema: Optional[str] = None
     estado_cuenta: Optional[bool] = None
 
+
 class UsuarioResponse(UsuarioBase):
-    id_usuario: Any # UUID
+    id_usuario: Any  # UUID
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
 
 class ProyectoBase(BaseModel):
     codigo_proyecto: str
@@ -110,7 +123,7 @@ class ProyectoBase(BaseModel):
     titulo_proyecto: str
     tipo_proyecto: Optional[str] = None
     tipo_programa: Optional[str] = None
-    facultad_proyecto: Optional[str] = 'Ingeniería de Sistemas e Informática'
+    facultad_proyecto: Optional[str] = "Ingeniería de Sistemas e Informática"
     presupuesto_asignado: Optional[float] = 0.0
     codigo_grupo: Optional[str] = None
     area_academica: Optional[str] = None
@@ -120,11 +133,13 @@ class ProyectoBase(BaseModel):
     fecha_rendicion_70: Optional[date] = None
     fecha_rendicion_100: Optional[date] = None
     fecha_informe_final: Optional[date] = None
-    estado_proyecto: Optional[str] = 'Aprobado'
+    estado_proyecto: Optional[str] = "Aprobado"
     observaciones: Optional[str] = None
+
 
 class ProyectoCreate(ProyectoBase):
     pass
+
 
 class ProyectoUpdate(BaseModel):
     resolucion_aprobacion: Optional[str] = None
@@ -143,42 +158,49 @@ class ProyectoUpdate(BaseModel):
     observaciones: Optional[str] = None
     justificacion: Optional[str] = None
 
+
 class ProyectoEstadoUpdate(BaseModel):
     estado_proyecto: str
     justificacion: str
+
 
 class ProyectoResponse(ProyectoBase):
     created_at: datetime
     updated_at: datetime
     is_external: Optional[bool] = False
-    
+
     class Config:
         from_attributes = True
+
 
 class ConvocatoriaBase(BaseModel):
     resolucion_base: Optional[str] = None
     titulo_convocatoria: str
-    entidad_emisora: Optional[str] = 'VRIP-UNMSM'
+    entidad_emisora: Optional[str] = "VRIP-UNMSM"
     presupuesto_maximo: Optional[float] = None
     fecha_inicio_inscripcion: Optional[date] = None
     fecha_cierre: Optional[date] = None
     url_bases_vrip: Optional[str] = None
-    estado_convocatoria: Optional[str] = 'Abierta'
+    estado_convocatoria: Optional[str] = "Abierta"
+
 
 class ConvocatoriaCreate(ConvocatoriaBase):
     pass
+
 
 class ConvocatoriaUpdate(BaseModel):
     estado_convocatoria: Optional[str] = None
     fecha_cierre: Optional[date] = None
     url_bases_vrip: Optional[str] = None
 
+
 class ConvocatoriaResponse(ConvocatoriaBase):
     id_convocatoria: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
 
 class EvidenciaDifusionBase(BaseModel):
     id_convocatoria: int
@@ -186,38 +208,45 @@ class EvidenciaDifusionBase(BaseModel):
     nombre_archivo: str
     url_archivo: str
 
+
 class EvidenciaDifusionCreate(EvidenciaDifusionBase):
     pass
+
 
 class EvidenciaDifusionResponse(EvidenciaDifusionBase):
     id_evidencia: int
     fecha_carga: datetime
-    
+
     class Config:
         from_attributes = True
+
 
 class EntregableBase(BaseModel):
     codigo_proyecto: str
     tipo_entregable: str
     fecha_limite_programada: Optional[date] = None
     fecha_entrega_real: Optional[date] = None
-    estado_entregable: Optional[str] = 'Pendiente'
+    estado_entregable: Optional[str] = "Pendiente"
     archivo_url: Optional[str] = None
+
 
 class EntregableCreate(EntregableBase):
     pass
+
 
 class EntregableUpdate(BaseModel):
     fecha_entrega_real: Optional[date] = None
     estado_entregable: Optional[str] = None
     archivo_url: Optional[str] = None
 
+
 class EntregableResponse(EntregableBase):
     id_entregable: int
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
+
 
 class InvestigadorProyectoBase(BaseModel):
     codigo_proyecto: str
@@ -227,12 +256,15 @@ class InvestigadorProyectoBase(BaseModel):
     facultad_integrante: Optional[str] = None
     condicion_gi: Optional[str] = None
 
+
 class InvestigadorProyectoCreate(InvestigadorProyectoBase):
     pass
+
 
 class InvestigadorProyectoResponse(InvestigadorProyectoBase):
     class Config:
         from_attributes = True
+
 
 class PublicacionBase(BaseModel):
     doi_codigo: Optional[str] = None
@@ -248,8 +280,10 @@ class PublicacionBase(BaseModel):
     url_documento: Optional[str] = None
     codigo_grupo: Optional[str] = None
 
+
 class PublicacionCreate(PublicacionBase):
     pass
+
 
 class PublicacionUpdate(BaseModel):
     doi_codigo: Optional[str] = None
@@ -258,24 +292,29 @@ class PublicacionUpdate(BaseModel):
     nombre_revista: Optional[str] = None
     cuartil_impacto: Optional[str] = None
 
+
 class PublicacionResponse(PublicacionBase):
     id_publicacion: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
 
 class InvestigadorPublicacionBase(BaseModel):
     dni_investigador: str
     id_publicacion: int
     filiacion_unmsm: Optional[bool] = True
 
+
 class InvestigadorPublicacionCreate(InvestigadorPublicacionBase):
     pass
+
 
 class InvestigadorPublicacionResponse(InvestigadorPublicacionBase):
     class Config:
         from_attributes = True
+
 
 class TesisBase(BaseModel):
     url_cybertesis: str
@@ -306,8 +345,9 @@ class TesisBase(BaseModel):
     palabras_clave: Optional[List[Any]] = None
     jurados_evaluadores: Optional[List[Any]] = None
 
+
 class TesisResponse(TesisBase):
     created_at: datetime
-    
+
     class Config:
         from_attributes = True

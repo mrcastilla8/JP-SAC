@@ -25,10 +25,7 @@ class SupabaseUploader:
     def fetch_grupos(self) -> List[Dict[str, Any]]:
         """Obtiene el catálogo de grupos de investigación para Fuzzy Matching de FKs."""
         settings.validate()
-        headers = {
-            "apikey": settings.SUPABASE_SERVICE_KEY,
-            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
-        }
+        headers = {"apikey": settings.SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"}
         url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/grupo_investigacion?select=id_grupo,nombre_grupo,siglas,codigo_grupo"
         try:
             response = requests.get(url, headers=headers)
@@ -41,10 +38,7 @@ class SupabaseUploader:
     def fetch_investigadores(self) -> List[Dict[str, Any]]:
         """Obtiene todos los investigadores registrados para mapeo local y evitar consultas redundantes."""
         settings.validate()
-        headers = {
-            "apikey": settings.SUPABASE_SERVICE_KEY,
-            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"
-        }
+        headers = {"apikey": settings.SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"}
         url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/investigador?select=dni,nombres,apellidos,institucion_principal,codigo_renacyt,orcid,categoria_renacyt,estado_renacyt,url_cti_vitae,investigador_sm,is_external"
         try:
             response = requests.get(url, headers=headers)
@@ -55,7 +49,6 @@ class SupabaseUploader:
             return []
 
     def upload(
-
         self,
         rpc_name: str,
         records: List[Dict[str, Any]],
@@ -81,18 +74,15 @@ class SupabaseUploader:
 
         totals: Dict[str, int] = {"procesados": 0, "fallidos": 0}
 
-        chunks = [
-            records[i : i + chunk_size]
-            for i in range(0, len(records), chunk_size)
-        ]
+        chunks = [records[i : i + chunk_size] for i in range(0, len(records), chunk_size)]
         total_chunks = len(chunks)
-        
+
         headers = {
             "apikey": settings.SUPABASE_SERVICE_KEY,
             "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/rpc/{rpc_name}"
 
         for idx, chunk in enumerate(chunks, 1):
@@ -101,22 +91,16 @@ class SupabaseUploader:
 
             try:
                 # Serializar Decimal → float antes de enviar
-                payload_json = json.loads(
-                    json.dumps(chunk, default=self._serialize)
-                )
+                payload_json = json.loads(json.dumps(chunk, default=self._serialize))
 
-                response = requests.post(
-                    url,
-                    headers=headers,
-                    json={"payload": payload_json}
-                )
-                
+                response = requests.post(url, headers=headers, json={"payload": payload_json})
+
                 response.raise_for_status()
                 data = response.json()
 
                 if data and isinstance(data, dict):
-                    totals["procesados"]  += data.get("procesados", 0)
-                    totals["fallidos"]    += data.get("fallidos", 0)
+                    totals["procesados"] += data.get("procesados", 0)
+                    totals["fallidos"] += data.get("fallidos", 0)
 
             except Exception as e:
                 # [EX4]: Cada chunk es una llamada RPC independiente.

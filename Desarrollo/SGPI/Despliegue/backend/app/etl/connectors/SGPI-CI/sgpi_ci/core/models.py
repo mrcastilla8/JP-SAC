@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List
-from datetime import date
+
 
 class InvestigadorModel(BaseModel):
     dni: str = Field(..., min_length=8, max_length=15)
@@ -17,12 +17,13 @@ class InvestigadorModel(BaseModel):
     url_cti_vitae: Optional[str] = Field(None)
     investigador_sm: bool = Field(False)
     estado_vigencia: str = Field("Activo")
-    
-    @validator('dni')
+
+    @validator("dni")
     def validar_dni(cls, v):
         if not v.isalnum():
             raise ValueError("El DNI debe ser alfanumérico")
         return v
+
 
 class ProyectoModel(BaseModel):
     codigo_proyecto: str = Field(...)
@@ -31,7 +32,8 @@ class ProyectoModel(BaseModel):
     tipo_programa: Optional[str] = Field(None)
     anio_convocatoria: Optional[int] = Field(None)
     id_grupo: Optional[int] = Field(None)
-    docentes: List[dict] = Field(default_factory=list) # [{'dni': '...', 'condicion_rol': '...'}]
+    docentes: List[dict] = Field(default_factory=list)  # [{'dni': '...', 'condicion_rol': '...'}]
+
 
 class PublicacionModel(BaseModel):
     titulo_articulo: str = Field(...)
@@ -43,11 +45,13 @@ class PublicacionModel(BaseModel):
     id_grupo: Optional[int] = Field(None)
     dni_autor: str = Field(...)
 
+
 class TesisModel(BaseModel):
     titulo_tesis: str = Field(...)
     autor_estudiante_texto: str = Field(...)
     asesor_texto: str = Field(...)
     dni_asesor: str = Field(...)
+
 
 class GrupoInvestigacionModel(BaseModel):
     codigo_grupo: Optional[str] = Field(None)
@@ -56,4 +60,4 @@ class GrupoInvestigacionModel(BaseModel):
     correo_coordinador: Optional[str] = Field(None)
     dni_coordinador: Optional[str] = Field(None)
     lineas_investigacion: List[str] = Field(default_factory=list)
-    miembros: List[dict] = Field(default_factory=list) # [{'dni': '...', 'condicion_miembro': '...'}]
+    miembros: List[dict] = Field(default_factory=list)  # [{'dni': '...', 'condicion_miembro': '...'}]

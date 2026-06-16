@@ -2,23 +2,25 @@ import sys
 import json
 import re
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional
 import typer
-from colorama import Fore, Back, Style, init
+from colorama import Fore, Style, init
 from tabulate import tabulate
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import datetime
 
 # Initialize colorama
 init(autoreset=True)
 
+
 # Helper function to match text with regex and case sensitivity support
-def match_text(value: Optional[str], pattern: Optional[str], case_sensitive: bool = False, is_regex: bool = False) -> bool:
+def match_text(
+    value: Optional[str], pattern: Optional[str], case_sensitive: bool = False, is_regex: bool = False
+) -> bool:
     if not pattern:
         return True
     if not value:
         return False
-        
+
     if is_regex:
         flags = 0 if case_sensitive else re.IGNORECASE
         try:
@@ -26,73 +28,110 @@ def match_text(value: Optional[str], pattern: Optional[str], case_sensitive: boo
         except re.error:
             # Fallback to simple case-insensitive substring search if regex is malformed
             pass
-            
+
     if case_sensitive:
         return pattern in value
     else:
         return pattern.lower() in value.lower()
 
+
 # Imports inside CLI commands to keep startup fast and prevent imports loops
 app = typer.Typer(
     name="vrip-connector",
     help="CLI Premium y adaptable para interactuar con las fuentes en vivo del VRIP y Cybertesis.",
-    no_args_is_help=True
+    no_args_is_help=True,
 )
+
 
 @app.command("scrape")
 def scrape(
-    source: str = typer.Option("all", "--source", "-s", help="Fuente a consultar: 'vrip' (convocatorias), 'cybertesis' (tesis), 'rais' (proyectos/resoluciones), o 'all'"),
-    query: Optional[str] = typer.Option(None, "--query", "-q", help="Término o palabra clave de búsqueda principal global"),
-    exclude_query: Optional[str] = typer.Option(None, "--exclude", help="Excluir registros que contengan este término global"),
-    
+    source: str = typer.Option(
+        "all",
+        "--source",
+        "-s",
+        help="Fuente a consultar: 'vrip' (convocatorias), 'cybertesis' (tesis), 'rais' (proyectos/resoluciones), o 'all'",
+    ),
+    query: Optional[str] = typer.Option(
+        None, "--query", "-q", help="Término o palabra clave de búsqueda principal global"
+    ),
+    exclude_query: Optional[str] = typer.Option(
+        None, "--exclude", help="Excluir registros que contengan este término global"
+    ),
     # Year Filters
-    year: Optional[int] = typer.Option(None, "--year", "-y", help="Filtrar por año académico o publicación específico (ej. 2025)"),
+    year: Optional[int] = typer.Option(
+        None, "--year", "-y", help="Filtrar por año académico o publicación específico (ej. 2025)"
+    ),
     years: Optional[str] = typer.Option(None, "--years", help="Lista de años separados por comas (ej. 2024,2025,2026)"),
     year_min: Optional[int] = typer.Option(None, "--year-min", help="Límite inferior para filtro de años (ej. 2023)"),
     year_max: Optional[int] = typer.Option(None, "--year-max", help="Límite superior para filtro de años (ej. 2026)"),
-    
     # Specific Text Filters (Maximum Personalization)
     title: Optional[str] = typer.Option(None, "--title", help="Filtro específico por título (soporta regex/sensible)"),
-    responsable: Optional[str] = typer.Option(None, "--responsable", "--author", help="Filtro específico por Investigador Principal, autor o tesista"),
-    coinvestigador: Optional[str] = typer.Option(None, "--coinvestigador", help="Filtro específico por miembro co-investigador (Proyectos)"),
+    responsable: Optional[str] = typer.Option(
+        None, "--responsable", "--author", help="Filtro específico por Investigador Principal, autor o tesista"
+    ),
+    coinvestigador: Optional[str] = typer.Option(
+        None, "--coinvestigador", help="Filtro específico por miembro co-investigador (Proyectos)"
+    ),
     code: Optional[str] = typer.Option(None, "--code", help="Filtro específico por código de proyecto o resolución"),
-    resolution: Optional[str] = typer.Option(None, "--resolution", help="Filtro específico por número de Resolución Rectoral (ej. 014353-2025-R)"),
-    
+    resolution: Optional[str] = typer.Option(
+        None, "--resolution", help="Filtro específico por número de Resolución Rectoral (ej. 014353-2025-R)"
+    ),
     # Advanced Logical Switches
-    case_sensitive: bool = typer.Option(False, "--case-sensitive", help="Habilitar coincidencia exacta distinguiendo mayúsculas y minúsculas"),
-    regex: bool = typer.Option(False, "--regex", help="Habilitar evaluación de expresiones regulares en todas las búsquedas de texto"),
-    
+    case_sensitive: bool = typer.Option(
+        False, "--case-sensitive", help="Habilitar coincidencia exacta distinguiendo mayúsculas y minúsculas"
+    ),
+    regex: bool = typer.Option(
+        False, "--regex", help="Habilitar evaluación de expresiones regulares en todas las búsquedas de texto"
+    ),
     # Date Range Filters
     date_since: Optional[str] = typer.Option(None, "--date-since", help="Fecha límite inferior en formato YYYY-MM-DD"),
     date_until: Optional[str] = typer.Option(None, "--date-until", help="Fecha límite superior en formato YYYY-MM-DD"),
-    
     # Convocatorias Specific Filters
-    status: str = typer.Option("todas", "--status", help="Filtrar convocatorias: 'abierta' (dias_restantes >= 0), 'cerrada' o 'todas'"),
-    min_days: Optional[int] = typer.Option(None, "--min-days", help="Días mínimos restantes antes del cierre (Convocatorias)"),
-    
+    status: str = typer.Option(
+        "todas", "--status", help="Filtrar convocatorias: 'abierta' (dias_restantes >= 0), 'cerrada' o 'todas'"
+    ),
+    min_days: Optional[int] = typer.Option(
+        None, "--min-days", help="Días mínimos restantes antes del cierre (Convocatorias)"
+    ),
     # Program and Faculty Filters
-    program: Optional[str] = typer.Option(None, "--program", "-p", help="Código de programa de investigación (ej. PCONFIGI)"),
-    programs: Optional[str] = typer.Option(None, "--programs", help="Lista de programas separados por comas (ej. PCONFIGI,PMULTI)"),
+    program: Optional[str] = typer.Option(
+        None, "--program", "-p", help="Código de programa de investigación (ej. PCONFIGI)"
+    ),
+    programs: Optional[str] = typer.Option(
+        None, "--programs", help="Lista de programas separados por comas (ej. PCONFIGI,PMULTI)"
+    ),
     facultad: Optional[str] = typer.Option(None, "--facultad", "-f", help="Filtrar por facultad (ej. FISI)"),
-    faculties: Optional[str] = typer.Option(None, "--faculties", help="Lista de facultades separadas por comas (ej. FISI,Medicina)"),
-    
+    faculties: Optional[str] = typer.Option(
+        None, "--faculties", help="Lista de facultades separadas por comas (ej. FISI,Medicina)"
+    ),
     # Financial Filters
     min_budget: Optional[float] = typer.Option(None, "--min-budget", help="Presupuesto mínimo financiado"),
     max_budget: Optional[float] = typer.Option(None, "--max-budget", help="Presupuesto máximo financiado"),
-    
     # Field Selection and Display (Maximum Personalization)
-    fields: Optional[str] = typer.Option(None, "--fields", help="Lista de campos específicos separados por comas a incluir en el output"),
-    
+    fields: Optional[str] = typer.Option(
+        None, "--fields", help="Lista de campos específicos separados por comas a incluir en el output"
+    ),
     # Format, Output and Interactive Wizard
     format_type: str = typer.Option("table", "--format", help="Formato de salida: 'table' (consola), 'json' o 'excel'"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Ruta de archivo para guardar resultados (JSON o Excel)"),
-    quiet: bool = typer.Option(False, "--quiet", help="Silenciar mensajes informativos y enviar únicamente el JSON estructurado a stdout"),
-    interactive: bool = typer.Option(False, "--interactive", "-i", help="Activar el asistente de búsqueda interactivo paso a paso"),
-    
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Ruta de archivo para guardar resultados (JSON o Excel)"
+    ),
+    quiet: bool = typer.Option(
+        False, "--quiet", help="Silenciar mensajes informativos y enviar únicamente el JSON estructurado a stdout"
+    ),
+    interactive: bool = typer.Option(
+        False, "--interactive", "-i", help="Activar el asistente de búsqueda interactivo paso a paso"
+    ),
     # Limits and Sorting
     limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Límite máximo de registros a retornar"),
-    sort_by: str = typer.Option("date", "--sort-by", help="Campo de ordenamiento: 'date' (fecha), 'budget' (presupuesto), 'title' (título), 'year' (año) o 'code' (código)"),
-    order: str = typer.Option("desc", "--order", help="Dirección del ordenamiento: 'asc' (ascendente) o 'desc' (descendente)")
+    sort_by: str = typer.Option(
+        "date",
+        "--sort-by",
+        help="Campo de ordenamiento: 'date' (fecha), 'budget' (presupuesto), 'title' (título), 'year' (año) o 'code' (código)",
+    ),
+    order: str = typer.Option(
+        "desc", "--order", help="Dirección del ordenamiento: 'asc' (ascendente) o 'desc' (descendente)"
+    ),
 ):
     """
     Scrapea y unifica información en vivo de las plataformas científicas de la UNMSM.
@@ -105,19 +144,19 @@ def scrape(
     # Force format to json if quiet mode is active
     if quiet:
         format_type = "json"
-        
+
     try:
         # Import engines and components
         from vrip_connector.engines.vrip_convocatorias import VripConvocatoriasExtractor
         from vrip_connector.engines.vrip_proyectos import VripProyectosExtractor
         from vrip_connector.engines.cybertesis_api import CyberthesisExtractor
         from vrip_connector.core.exporter import export_data
-        
+
         # Parse fields list if specified
         display_fields = []
         if fields:
             display_fields = [f.strip() for f in fields.split(",")]
-        
+
         # Build list of years to filter
         filter_years = []
         if year:
@@ -128,14 +167,14 @@ def scrape(
                     filter_years.append(int(y_str.strip()))
                 except ValueError:
                     pass
-                    
+
         # Build list of programs to filter
         filter_programs = []
         if program:
             filter_programs.append(program.upper().strip())
         if programs:
             filter_programs.extend([p.upper().strip() for p in programs.split(",")])
-            
+
         # Build list of faculties to filter
         filter_faculties = []
         if facultad:
@@ -151,13 +190,17 @@ def scrape(
                 since_date = datetime.strptime(date_since, "%Y-%m-%d").date()
             except ValueError:
                 if not quiet:
-                    print(f"{Fore.RED}Advertencia: Formato de '--date-since' inválido. Use YYYY-MM-DD.{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.RED}Advertencia: Formato de '--date-since' inválido. Use YYYY-MM-DD.{Style.RESET_ALL}"
+                    )
         if date_until:
             try:
                 until_date = datetime.strptime(date_until, "%Y-%m-%d").date()
             except ValueError:
                 if not quiet:
-                    print(f"{Fore.RED}Advertencia: Formato de '--date-until' inválido. Use YYYY-MM-DD.{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.RED}Advertencia: Formato de '--date-until' inválido. Use YYYY-MM-DD.{Style.RESET_ALL}"
+                    )
 
         if not quiet:
             print("=" * 100)
@@ -218,11 +261,11 @@ def scrape(
         if "vrip" in sources_to_run:
             ext = VripConvocatoriasExtractor()
             raw_convocatorias = ext.extract(year=year)
-            
+
         if "rais" in sources_to_run:
             ext = VripProyectosExtractor()
             raw_proyectos = ext.extract(year=year, program=program, query=query)
-            
+
         if "cybertesis" in sources_to_run:
             ext = CyberthesisExtractor()
             search_query = query if query else "FISI"
@@ -231,7 +274,7 @@ def scrape(
         # ----------------------------------------------------
         # APPLY ADVANCED IN-MEMORY LOGICAL FILTERS
         # ----------------------------------------------------
-        
+
         # 1. Filter Convocatorias
         filtered_convocatorias = []
         for item in raw_convocatorias:
@@ -244,7 +287,7 @@ def scrape(
                     item_year = item_date.year
                 except ValueError:
                     pass
-            
+
             # Year filters
             if filter_years and item_year and item_year not in filter_years:
                 continue
@@ -252,7 +295,7 @@ def scrape(
                 continue
             if year_max and item_year and item_year > year_max:
                 continue
-                
+
             # Date boundaries
             if since_date and item_date and item_date < since_date:
                 continue
@@ -262,14 +305,14 @@ def scrape(
             # Convocatorias specific filters (Status / Min Days)
             if min_days is not None and (item.dias_restantes is None or item.dias_restantes < min_days):
                 continue
-            
+
             if status == "abierta":
                 if item.dias_restantes is None or item.dias_restantes < 0:
                     continue
             elif status == "cerrada":
                 if item.dias_restantes is not None and item.dias_restantes >= 0:
                     continue
-                    
+
             # Specific Text Filters
             if title and not match_text(item.titulo, title, case_sensitive, regex):
                 continue
@@ -284,20 +327,20 @@ def scrape(
                 text_to_search = f"{item.titulo} {item.plazo_cierre_original} {item.entidad_promotora}"
                 if not match_text(text_to_search, query, case_sensitive, regex):
                     continue
-            
+
             # Exclusion check
             if exclude_query:
                 text_to_search = f"{item.titulo} {item.plazo_cierre_original} {item.entidad_promotora}"
                 if match_text(text_to_search, exclude_query, case_sensitive, regex):
                     continue
-                    
+
             filtered_convocatorias.append(item)
 
         # 2. Filter Proyectos
         filtered_proyectos = []
         for item in raw_proyectos:
             item_year = item.anio_academico
-            
+
             # Year limits
             if filter_years and item_year not in filter_years:
                 continue
@@ -305,7 +348,7 @@ def scrape(
                 continue
             if year_max and item_year > year_max:
                 continue
-                
+
             # Date boundaries
             item_date = None
             if item.fecha_aprobacion:
@@ -321,17 +364,17 @@ def scrape(
             # Program codes match
             if filter_programs and not any(p in item.codigo_programa.upper() for p in filter_programs):
                 continue
-                
+
             # Faculty match
             if filter_faculties and not any(f in item.facultad.upper() for f in filter_faculties):
                 continue
-                
+
             # Financial filters
             if min_budget is not None and (item.monto_financiado is None or item.monto_financiado < min_budget):
                 continue
             if max_budget is not None and (item.monto_financiado is None or item.monto_financiado > max_budget):
                 continue
-                
+
             # Specific Text Filters
             if title and not match_text(item.titulo, title, case_sensitive, regex):
                 continue
@@ -356,7 +399,7 @@ def scrape(
                 combined_fields = f"{item.titulo} {item.responsable} {item.codigo_proyecto or ''} {item.numero_resolucion or ''} {' '.join(item.coinvestigadores)}"
                 if not match_text(combined_fields, query, case_sensitive, regex):
                     continue
-                    
+
             if exclude_query:
                 combined_fields = f"{item.titulo} {item.responsable} {item.codigo_proyecto or ''} {item.numero_resolucion or ''} {' '.join(item.coinvestigadores)}"
                 if match_text(combined_fields, exclude_query, case_sensitive, regex):
@@ -368,7 +411,7 @@ def scrape(
         filtered_tesis = []
         for item in raw_tesis:
             item_year = item.anio_publicacion
-            
+
             # Year filters
             if filter_years and item_year not in filter_years:
                 continue
@@ -376,13 +419,13 @@ def scrape(
                 continue
             if year_max and item_year > year_max:
                 continue
-                
+
             # Date boundaries mapped to publication year
             if since_date and item_year < since_date.year:
                 continue
             if until_date and item_year > until_date.year:
                 continue
-                
+
             # Specific Text Filters
             if title and not match_text(item.titulo, title, case_sensitive, regex):
                 continue
@@ -401,14 +444,14 @@ def scrape(
                 combined = f"{item.titulo} {item.autores} {item.anio_publicacion}"
                 if match_text(combined, exclude_query, case_sensitive, regex):
                     continue
-                    
+
             filtered_tesis.append(item)
 
         # ----------------------------------------------------
         # SORTING AND LIMITS
         # ----------------------------------------------------
         is_desc = order.lower() == "desc"
-        
+
         # Sort Convocatorias
         if sort_by == "date":
             filtered_convocatorias.sort(key=lambda x: x.plazo_cierre or "0000-00-00", reverse=is_desc)
@@ -442,19 +485,19 @@ def scrape(
         # ----------------------------------------------------
         # FIELD SELECTION AND PAYLOAD PACKAGING
         # ----------------------------------------------------
-        
+
         # Pack raw models into standard dict dumps if display fields are active
         if display_fields:
             conv_payload = []
             for item in filtered_convocatorias:
                 d = item.model_dump()
                 conv_payload.append({k: v for k, v in d.items() if k in display_fields})
-            
+
             proj_payload = []
             for item in filtered_proyectos:
                 d = item.model_dump()
                 proj_payload.append({k: v for k, v in d.items() if k in display_fields})
-                
+
             tesis_payload = []
             for item in filtered_tesis:
                 d = item.model_dump()
@@ -468,7 +511,7 @@ def scrape(
             export_payload = {
                 "Convocatorias": conv_payload,
                 "Proyectos_Resoluciones": proj_payload,
-                "Cybertesis_Tesis": tesis_payload
+                "Cybertesis_Tesis": tesis_payload,
             }
             total_elements = len(filtered_convocatorias) + len(filtered_proyectos) + len(filtered_tesis)
         else:
@@ -485,7 +528,7 @@ def scrape(
         # ----------------------------------------------------
         # RENDER OUTPUTS
         # ----------------------------------------------------
-        
+
         if format_type.lower() == "table" and not quiet:
             if "vrip" in sources_to_run:
                 print(f" {Fore.GREEN}{Style.BRIGHT}CONVOCATORIAS VIGENTES ({len(filtered_convocatorias)})")
@@ -493,7 +536,10 @@ def scrape(
                     # Dynamically determine columns based on fields
                     if display_fields:
                         headers = [f.upper() for f in display_fields]
-                        table_data = [[str(item.model_dump().get(f, "-"))[:50] for f in display_fields] for item in filtered_convocatorias]
+                        table_data = [
+                            [str(item.model_dump().get(f, "-"))[:50] for f in display_fields]
+                            for item in filtered_convocatorias
+                        ]
                     else:
                         headers = ["Título", "Entidad Promotora", "Fecha", "Cierre", "Días Rest."]
                         table_data = [
@@ -502,7 +548,7 @@ def scrape(
                                 item.entidad_promotora[:35],
                                 item.fecha_publicacion or "-",
                                 item.plazo_cierre_original,
-                                f"{Fore.GREEN if (item.dias_restantes or 0) > 7 else Fore.RED}{item.dias_restantes if item.dias_restantes is not None else '-'}"
+                                f"{Fore.GREEN if (item.dias_restantes or 0) > 7 else Fore.RED}{item.dias_restantes if item.dias_restantes is not None else '-'}",
                             ]
                             for item in filtered_convocatorias
                         ]
@@ -510,15 +556,26 @@ def scrape(
                 else:
                     print(" No se encontraron convocatorias que cumplan con los filtros.")
                 print("\n")
-                
+
             if "rais" in sources_to_run:
                 print(f" {Fore.GREEN}{Style.BRIGHT}RESOLUCIONES Y PROYECTOS ({len(filtered_proyectos)})")
                 if filtered_proyectos:
                     if display_fields:
                         headers = [f.upper() for f in display_fields]
-                        table_data = [[str(item.model_dump().get(f, "-"))[:50] for f in display_fields] for item in filtered_proyectos]
+                        table_data = [
+                            [str(item.model_dump().get(f, "-"))[:50] for f in display_fields]
+                            for item in filtered_proyectos
+                        ]
                     else:
-                        headers = ["Código", "Prog.", "Título del Proyecto / Resolución", "Responsable", "Monto", "Resolución", "Año"]
+                        headers = [
+                            "Código",
+                            "Prog.",
+                            "Título del Proyecto / Resolución",
+                            "Responsable",
+                            "Monto",
+                            "Resolución",
+                            "Año",
+                        ]
                         table_data = [
                             [
                                 item.codigo_proyecto or "-",
@@ -527,7 +584,7 @@ def scrape(
                                 item.responsable[:25],
                                 f"S/. {item.monto_financiado:,.2f}" if item.monto_financiado is not None else "-",
                                 item.numero_resolucion or "-",
-                                item.anio_academico
+                                item.anio_academico,
                             ]
                             for item in filtered_proyectos
                         ]
@@ -535,13 +592,15 @@ def scrape(
                 else:
                     print(" No se encontraron proyectos que cumplan con los filtros.")
                 print("\n")
- 
+
             if "cybertesis" in sources_to_run:
                 print(f" {Fore.GREEN}{Style.BRIGHT}TESIS EN CYBERTESIS ({len(filtered_tesis)})")
                 if filtered_tesis:
                     if display_fields:
                         headers = [f.upper() for f in display_fields]
-                        table_data = [[str(item.model_dump().get(f, "-"))[:50] for f in display_fields] for item in filtered_tesis]
+                        table_data = [
+                            [str(item.model_dump().get(f, "-"))[:50] for f in display_fields] for item in filtered_tesis
+                        ]
                     else:
                         headers = ["Título de la Tesis", "Autores / Tesistas", "Año", "Enlace Handle"]
                         table_data = [
@@ -549,7 +608,7 @@ def scrape(
                                 f"{Fore.WHITE}{item.titulo[:50]}...",
                                 item.autores[:30],
                                 item.anio_publicacion,
-                                f"{Fore.BLUE}{item.enlace_handle}"
+                                f"{Fore.BLUE}{item.enlace_handle}",
                             ]
                             for item in filtered_tesis
                         ]
@@ -557,45 +616,47 @@ def scrape(
                 else:
                     print(" No se encontraron tesis que cumplan con los filtros.")
                 print("\n")
-                
+
             print("=" * 100)
             print(f" {Fore.GREEN}{Style.BRIGHT}BÚSQUEDA Y PROCESAMIENTO FINALIZADO CON ÉXITO")
             print(f" {Fore.WHITE}Total unificado de registros recuperados: {total_elements}")
             print("=" * 100)
- 
+
             if output:
                 # Deduce format from file extension if possible
                 out_ext = Path(output).suffix.lower()
                 deduced_format = "excel" if out_ext in [".xlsx", ".xls"] else "json"
                 # Exporter needs actual Pydantic models, so we pass the non-dumped payload
-                raw_payload = get_raw_payload(source_clean, sources_to_run, filtered_convocatorias, filtered_proyectos, filtered_tesis)
+                raw_payload = get_raw_payload(
+                    source_clean, sources_to_run, filtered_convocatorias, filtered_proyectos, filtered_tesis
+                )
                 export_data(raw_payload, output_path=output, format_type=deduced_format, quiet=quiet)
- 
+
         else:
             # Export raw models using core exporter to preserve premium typing
-            raw_payload = get_raw_payload(source_clean, sources_to_run, filtered_convocatorias, filtered_proyectos, filtered_tesis)
+            raw_payload = get_raw_payload(
+                source_clean, sources_to_run, filtered_convocatorias, filtered_proyectos, filtered_tesis
+            )
             if display_fields and format_type == "json":
                 # JSON with custom fields can be dumped as dict directly
                 export_data(export_payload, output_path=output, format_type=format_type, quiet=quiet)
             else:
                 export_data(raw_payload, output_path=output, format_type=format_type, quiet=quiet)
- 
+
     except Exception as e:
         if not quiet:
             import traceback
+
             print(f"{Fore.RED}Error crítico durante la ejecución del CLI: {e}{Style.RESET_ALL}", file=sys.stderr)
             traceback.print_exc()
         else:
             print(json.dumps({"error": str(e)}))
         sys.exit(1)
 
+
 def get_raw_payload(source_clean, sources_to_run, conv, proj, tesis):
     if source_clean == "all":
-        return {
-            "Convocatorias": conv,
-            "Proyectos_Resoluciones": proj,
-            "Cybertesis_Tesis": tesis
-        }
+        return {"Convocatorias": conv, "Proyectos_Resoluciones": proj, "Cybertesis_Tesis": tesis}
     else:
         if "vrip" in sources_to_run:
             return conv
@@ -603,6 +664,7 @@ def get_raw_payload(source_clean, sources_to_run, conv, proj, tesis):
             return proj
         else:
             return tesis
+
 
 # Interactive wizard implementation
 @app.command("wizard")
@@ -612,29 +674,30 @@ def wizard_command():
     """
     run_wizard()
 
+
 def run_wizard():
     print("\n" + "=" * 100)
     print(f" {Fore.YELLOW}{Style.BRIGHT}ASISTENTE INTERACTIVO DE BÚSQUEDA Y EXTRACCIÓN (WIZARD)")
     print(f" {Fore.CYAN}Conector Científico VRIP / Cybertesis - UNMSM FISI")
     print("=" * 100)
-    
+
     # 1. Selection of Source
     print(f"\n{Fore.GREEN}[Paso 1] Seleccione la fuente de datos a consultar:{Style.RESET_ALL}")
     print(" 1) Convocatorias vigentes (Portal VRIP)")
     print(" 2) Resoluciones Rectorales de Proyectos Aprobados (RAIS/WP REST API)")
     print(" 3) Tesis y producción académica (Cybertesis API)")
     print(" 4) Todas las fuentes unificadas")
-    
+
     opt_src = input(" Seleccione una opción [1-4, por defecto 4]: ").strip()
     source_map = {"1": "vrip", "2": "rais", "3": "cybertesis", "4": "all"}
     source_val = source_map.get(opt_src, "all")
-    
+
     # 2. General Query
     print(f"\n{Fore.GREEN}[Paso 2] Filtro de búsqueda textual:{Style.RESET_ALL}")
     query_val = input(" Ingrese un término o frase clave global (Opcional): ").strip()
     if query_val == "":
         query_val = None
-        
+
     # 3. Specific Text Filters
     title_val = None
     resp_val = None
@@ -644,36 +707,44 @@ def run_wizard():
     exclude_val = None
     case_val = False
     regex_val = False
-    
-    specific_text = input(f"\n ¿Desea aplicar filtros textuales avanzados por campos? (s/n, por defecto n): ").strip().lower()
+
+    specific_text = (
+        input("\n ¿Desea aplicar filtros textuales avanzados por campos? (s/n, por defecto n): ").strip().lower()
+    )
     if specific_text in ["s", "si", "yes"]:
         t = input(" - Filtrar por TÍTULO específico: ").strip()
-        if t: title_val = t
-        
+        if t:
+            title_val = t
+
         r = input(" - Filtrar por INVESTIGADOR PRINCIPAL o AUTOR: ").strip()
-        if r: resp_val = r
-        
+        if r:
+            resp_val = r
+
         if source_val in ["rais", "all"]:
             c = input(" - Filtrar por CO-INVESTIGADOR: ").strip()
-            if c: coinv_val = c
-            
+            if c:
+                coinv_val = c
+
             co = input(" - Filtrar por CÓDIGO de proyecto: ").strip()
-            if co: code_val = co
-            
+            if co:
+                code_val = co
+
             re_num = input(" - Filtrar por número de RESOLUCIÓN Rectoral: ").strip()
-            if re_num: res_val = re_num
-            
+            if re_num:
+                res_val = re_num
+
         ex = input(" - Excluir registros que contengan el texto: ").strip()
-        if ex: exclude_val = ex
-        
+        if ex:
+            exclude_val = ex
+
         cs = input(" - ¿Búsqueda sensible a mayúsculas/minúsculas? (s/n, por defecto n): ").strip().lower()
         if cs in ["s", "si", "yes"]:
             case_val = True
-            
+
         rx = input(" - ¿Habilitar expresiones regulares (Regex)? (s/n, por defecto n): ").strip().lower()
         if rx in ["s", "si", "yes"]:
             regex_val = True
-            
+
     # 4. Year/Time Filters
     year_val = None
     years_val = None
@@ -681,10 +752,12 @@ def run_wizard():
     ymax_val = None
     since_val = None
     until_val = None
-    
-    time_filt = input(f"\n ¿Desea aplicar filtros de tiempo y rango de años? (s/n, por defecto n): ").strip().lower()
+
+    time_filt = input("\n ¿Desea aplicar filtros de tiempo y rango de años? (s/n, por defecto n): ").strip().lower()
     if time_filt in ["s", "si", "yes"]:
-        y_opt = input(" - Ingrese un año específico (ej. 2025) o múltiples separados por comas (ej. 2024,2025): ").strip()
+        y_opt = input(
+            " - Ingrese un año específico (ej. 2025) o múltiples separados por comas (ej. 2024,2025): "
+        ).strip()
         if y_opt:
             if "," in y_opt:
                 years_val = y_opt
@@ -693,22 +766,28 @@ def run_wizard():
                     year_val = int(y_opt)
                 except ValueError:
                     pass
-                    
+
         ymin = input(" - Año mínimo (ej. 2023): ").strip()
         if ymin:
-            try: ymin_val = int(ymin)
-            except ValueError: pass
-            
+            try:
+                ymin_val = int(ymin)
+            except ValueError:
+                pass
+
         ymax = input(" - Año máximo (ej. 2026): ").strip()
         if ymax:
-            try: ymax_val = int(ymax)
-            except ValueError: pass
-            
+            try:
+                ymax_val = int(ymax)
+            except ValueError:
+                pass
+
         ds = input(" - Fecha de publicación desde (YYYY-MM-DD): ").strip()
-        if ds: since_val = ds
-        
+        if ds:
+            since_val = ds
+
         du = input(" - Fecha de publicación hasta (YYYY-MM-DD): ").strip()
-        if du: until_val = du
+        if du:
+            until_val = du
 
     # 5. Advanced filters (programs, faculties, budgets)
     prog_val = None
@@ -717,41 +796,55 @@ def run_wizard():
     maxb_val = None
     status_val = "todas"
     mind_val = None
-    
-    adv_filt = input(f"\n ¿Desea aplicar filtros de presupuesto, facultades o vigencia? (s/n, por defecto n): ").strip().lower()
+
+    adv_filt = (
+        input("\n ¿Desea aplicar filtros de presupuesto, facultades o vigencia? (s/n, por defecto n): ").strip().lower()
+    )
     if adv_filt in ["s", "si", "yes"]:
         if source_val in ["rais", "all"]:
             p = input(" - Código de programa (ej. PCONFIGI, PMULTI): ").strip()
-            if p: prog_val = p
-            
+            if p:
+                prog_val = p
+
             f = input(" - Facultad (ej. FISI, Medicina): ").strip()
-            if f: fac_val = f
-            
+            if f:
+                fac_val = f
+
             minb = input(" - Presupuesto mínimo financiado: ").strip()
             if minb:
-                try: minb_val = float(minb)
-                except ValueError: pass
-                
+                try:
+                    minb_val = float(minb)
+                except ValueError:
+                    pass
+
             maxb = input(" - Presupuesto máximo financiado: ").strip()
             if maxb:
-                try: maxb_val = float(maxb)
-                except ValueError: pass
-                
+                try:
+                    maxb_val = float(maxb)
+                except ValueError:
+                    pass
+
         if source_val in ["vrip", "all"]:
             st = input(" - Vigencia de convocatoria (abierta / cerrada / todas): ").strip().lower()
             if st in ["abierta", "cerrada", "todas"]:
                 status_val = st
-                
+
             md = input(" - Mínimo de días restantes para el cierre: ").strip()
             if md:
-                try: mind_val = int(md)
-                except ValueError: pass
+                try:
+                    mind_val = int(md)
+                except ValueError:
+                    pass
 
     # 6. Fields selection
     fields_val = None
-    fld_sel = input(f"\n ¿Desea seleccionar campos/columnas específicas a retornar? (s/n, por defecto n): ").strip().lower()
+    fld_sel = (
+        input("\n ¿Desea seleccionar campos/columnas específicas a retornar? (s/n, por defecto n): ").strip().lower()
+    )
     if fld_sel in ["s", "si", "yes"]:
-        fields_val = input(" Ingrese nombres de campos separados por comas (ej. titulo,responsable,monto_financiado): ").strip()
+        fields_val = input(
+            " Ingrese nombres de campos separados por comas (ej. titulo,responsable,monto_financiado): "
+        ).strip()
         if fields_val == "":
             fields_val = None
 
@@ -760,19 +853,23 @@ def run_wizard():
     print(" 1) Tabla legible en consola")
     print(" 2) Archivo JSON estructurado")
     print(" 3) Libro Excel Corporativo Premium (.xlsx)")
-    
+
     opt_fmt = input(" Seleccione formato [1-3, por defecto 1]: ").strip()
     fmt_map = {"1": "table", "2": "json", "3": "excel"}
     fmt_val = fmt_map.get(opt_fmt, "table")
-    
+
     out_val = None
-    if fmt_val in ["json", "excel"] or input(" ¿Desea guardar además los resultados en un archivo? (s/n, por defecto n): ").strip().lower() in ["s", "si", "yes"]:
+    if fmt_val in ["json", "excel"] or input(
+        " ¿Desea guardar además los resultados en un archivo? (s/n, por defecto n): "
+    ).strip().lower() in ["s", "si", "yes"]:
         out_val = input(" Ingrese la ruta o nombre del archivo de salida: ").strip()
         if out_val == "":
             out_val = None
-            
-    print(f"\n{Fore.YELLOW}Iniciando consulta científica interactiva con los filtros seleccionados...{Style.RESET_ALL}\n")
-    
+
+    print(
+        f"\n{Fore.YELLOW}Iniciando consulta científica interactiva con los filtros seleccionados...{Style.RESET_ALL}\n"
+    )
+
     # Run scrape command programmatically
     scrape(
         source=source_val,
@@ -806,8 +903,9 @@ def run_wizard():
         interactive=False,
         limit=None,
         sort_by="date",
-        order="desc"
+        order="desc",
     )
+
 
 def main():
     # Make sure stdout/stderr are UTF-8 on Windows
@@ -815,8 +913,9 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")
     if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8")
-        
+
     app()
+
 
 if __name__ == "__main__":
     main()

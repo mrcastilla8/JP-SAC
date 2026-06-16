@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import Optional, Dict
 
 from fastapi import APIRouter, BackgroundTasks, File, UploadFile, HTTPException, status
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -16,10 +15,10 @@ router = APIRouter()
 # Inyección de dependencias para módulos con guiones en el nombre
 # ---------------------------------------------------------------------------
 # La carpeta SGPI-CI tiene guiones, por lo que no puede ser importada directamente
-# usando la sintaxis estándar (import app.etl.connectors.SGPI-CI...). 
+# usando la sintaxis estándar (import app.etl.connectors.SGPI-CI...).
 # Añadimos su ruta al PYTHONPATH en tiempo de ejecución.
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sgpi_ci_path = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..', '..', 'etl', 'connectors', 'SGPI-CI'))
+sgpi_ci_path = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "..", "..", "etl", "connectors", "SGPI-CI"))
 
 if sgpi_ci_path not in sys.path:
     sys.path.insert(0, sgpi_ci_path)
@@ -30,28 +29,31 @@ except ImportError as e:
     logger.error(f"Error importando EtlProcessor de SGPI-CI: {e}")
     EtlProcessor = None
 
+
 # ---------------------------------------------------------------------------
 # Estado de Jobs en Memoria (Simple)
 # ---------------------------------------------------------------------------
 class ImportJobState:
     def __init__(self, job_id: str, filename: str):
-        self.job_id     = job_id
-        self.filename   = filename
-        self.status     = "queued"      # queued | running | completed | failed
-        self.progress   = 0             # 0-100
-        self.processed  = 0             
-        self.errors     = 0             
-        self.created    = 0             
-        self.updated    = 0             
+        self.job_id = job_id
+        self.filename = filename
+        self.status = "queued"  # queued | running | completed | failed
+        self.progress = 0  # 0-100
+        self.processed = 0
+        self.errors = 0
+        self.created = 0
+        self.updated = 0
         self.error_msg: Optional[str] = None
         self.started_at = datetime.now(timezone.utc).isoformat()
         self.finished_at: Optional[str] = None
 
+
 _jobs: Dict[str, ImportJobState] = {}
 
 # Directorio temporal para los archivos subidos
-TEMP_DIR = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..', '..', '..', 'tmp_uploads'))
+TEMP_DIR = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "..", "..", "..", "tmp_uploads"))
 os.makedirs(TEMP_DIR, exist_ok=True)
+
 
 # ---------------------------------------------------------------------------
 # Tarea en Background
@@ -67,7 +69,7 @@ async def _run_sgpi_ci(job_id: str, file_path: str) -> None:
         return
 
     job.status = "running"
-    job.progress = 10 # Iniciando procesamiento
+    job.progress = 10  # Iniciando procesamiento
 
     if EtlProcessor is None:
         job.status = "failed"
@@ -84,8 +86,8 @@ async def _run_sgpi_ci(job_id: str, file_path: str) -> None:
 
         # Simular avance mientras se resuelve (como EtlProcessor no reporta progreso
         # internamente, marcamos un 50% fijo mientras esperamos que termine).
-        job.progress = 50 
-        
+        job.progress = 50
+
         resultado = await asyncio.to_thread(execute_etl)
 
         if "error" in resultado:
@@ -94,7 +96,7 @@ async def _run_sgpi_ci(job_id: str, file_path: str) -> None:
         else:
             job.status = "completed"
             job.progress = 100
-            
+
             # Extraer métricas reales de los resultados devueltos por SupabaseUploader
             # Resultados típicos devuelven la lista de diccionarios insertados
             db_res = resultado.get("resultados_db", {})
@@ -133,6 +135,7 @@ async def _run_sgpi_ci(job_id: str, file_path: str) -> None:
 # Rutas (Endpoints)
 # ---------------------------------------------------------------------------
 
+
 @router.post(
     "/excel",
     status_code=status.HTTP_202_ACCEPTED,
@@ -148,23 +151,19 @@ async def upload_excel(
     """
     job_id = str(uuid.uuid4())
     filename = file.filename or "archivo_desconocido.xlsx"
-    
+
     file_path = os.path.join(TEMP_DIR, f"{job_id}_{filename}")
-    
+
     # Guardar en disco para que EtlProcessor pueda leerlo usando pd.read_excel
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
 
     _jobs[job_id] = ImportJobState(job_id=job_id, filename=filename)
-    
+
     # Lanzar pipeline
     background_tasks.add_task(_run_sgpi_ci, job_id, file_path)
 
-    return {
-        "success": True,
-        "data": {"job_id": job_id},
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    return {"success": True, "data": {"job_id": job_id}, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @router.get(
@@ -180,24 +179,20 @@ async def get_import_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job no encontrado")
 
     payload = {
-        "status":    job.status,
-        "progress":  job.progress,
+        "status": job.status,
+        "progress": job.progress,
         "processed": job.processed,
-        "errors":    job.errors,
+        "errors": job.errors,
     }
 
     if job.status == "completed":
         payload["summary"] = {
-            "created":  job.created,
-            "updated":  job.updated,
-            "errors":   job.errors,
+            "created": job.created,
+            "updated": job.updated,
+            "errors": job.errors,
         }
 
     if job.status == "failed" and job.error_msg:
         payload["error"] = job.error_msg
 
-    return {
-        "success": True,
-        "data": payload,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    return {"success": True, "data": payload, "timestamp": datetime.now(timezone.utc).isoformat()}

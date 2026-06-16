@@ -1,11 +1,11 @@
 import json
 import sys
-from typing import Optional
 
 import typer
 
 try:
     from colorama import Fore, Style, init as colorama_init
+
     colorama_init(autoreset=True)
     _COLOR = True
 except ImportError:
@@ -24,6 +24,7 @@ app = typer.Typer(
 # Utilidades de presentación
 # ---------------------------------------------------------------------------
 
+
 def _banner() -> None:
     if _COLOR:
         print("=" * 72)
@@ -36,9 +37,11 @@ def _banner() -> None:
         print(" SGPI FISI-UNMSM")
         print("=" * 72)
 
+
 # ---------------------------------------------------------------------------
 # Comando: import
 # ---------------------------------------------------------------------------
+
 
 @app.command("import")
 def import_cmd(
@@ -47,7 +50,9 @@ def import_cmd(
         help="Ruta al archivo de datos (.xlsx o .csv).",
     ),
     quiet: bool = typer.Option(
-        False, "--quiet", "-q",
+        False,
+        "--quiet",
+        "-q",
         help="Solo imprime el JSON final a stdout. Ideal para integración con la API.",
     ),
 ):
@@ -59,18 +64,20 @@ def import_cmd(
 
     try:
         from sgpi_ci.core.processor import EtlProcessor
+
         processor = EtlProcessor(file_path=file)
         res = processor.process(upload_to_db=True)
         if quiet:
             print(json.dumps(res))
         else:
             print(json.dumps(res, indent=2, ensure_ascii=False))
-            
+
     except SystemExit:
         raise
     except Exception as e:
         if not quiet:
             import traceback
+
             typer.echo(f"\nError inesperado: {e}", err=True)
             traceback.print_exc()
         else:
@@ -82,6 +89,7 @@ def import_cmd(
 # Comando: preview  (Dry-Run)
 # ---------------------------------------------------------------------------
 
+
 @app.command("preview")
 def preview_cmd(
     file: str = typer.Argument(
@@ -89,7 +97,9 @@ def preview_cmd(
         help="Ruta al archivo de datos (.xlsx o .csv).",
     ),
     quiet: bool = typer.Option(
-        False, "--quiet", "-q",
+        False,
+        "--quiet",
+        "-q",
         help="Solo imprime el JSON de diagnóstico.",
     ),
 ):
@@ -105,18 +115,20 @@ def preview_cmd(
 
     try:
         from sgpi_ci.core.processor import EtlProcessor
+
         processor = EtlProcessor(file_path=file)
         res = processor.process(upload_to_db=False)
         if quiet:
             print(json.dumps(res))
         else:
             print(json.dumps(res, indent=2, ensure_ascii=False))
-            
+
     except SystemExit:
         raise
     except Exception as e:
         if not quiet:
             import traceback
+
             typer.echo(f"\nError inesperado: {e}", err=True)
             traceback.print_exc()
         else:
@@ -128,8 +140,10 @@ def preview_cmd(
 # Punto de entrada
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     app()
+
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, and_, delete
+from sqlalchemy import select, func, or_, delete
 from typing import List, Optional
 from pydantic import BaseModel
 import math
@@ -13,15 +13,25 @@ from app.db.session import get_db
 from app.models.domain import Proyecto, Entregable, InvestigadorProyecto, ProyectoEstadoHistorial
 from app.core.logger import logger
 from sgpi_capirestc.crud.crud_proyecto import proyecto
-from sgpi_capirestc.schemas.domain_schemas import ProyectoCreate, ProyectoUpdate, ProyectoResponse, EntregableCreate, EntregableUpdate, EntregableResponse, InvestigadorProyectoCreate, InvestigadorProyectoResponse, ProyectoEstadoUpdate
+from sgpi_capirestc.schemas.domain_schemas import (
+    ProyectoCreate,
+    ProyectoUpdate,
+    ProyectoResponse,
+    EntregableCreate,
+    EntregableUpdate,
+    EntregableResponse,
+    InvestigadorProyectoCreate,
+    InvestigadorProyectoResponse,
+    ProyectoEstadoUpdate,
+)
 from app.core.security import get_current_user, require_admin
 from app.core.audit import log_audit_event
 
 # Inyección dinámica para importar conectores
 current_dir = os.path.dirname(os.path.abspath(__file__))
-app_dir = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..', '..'))
-cjca_path = os.path.join(app_dir, 'etl', 'connectors', 'SGPI-CJCA')
-csapicyb_path = os.path.join(app_dir, 'etl', 'connectors', 'SGPI-CSAPICYB')
+app_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "..", ".."))
+cjca_path = os.path.join(app_dir, "etl", "connectors", "SGPI-CJCA")
+csapicyb_path = os.path.join(app_dir, "etl", "connectors", "SGPI-CSAPICYB")
 
 if cjca_path not in sys.path:
     sys.path.insert(0, cjca_path)
@@ -57,7 +67,7 @@ async def list_proyectos(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Lista y filtra proyectos de investigación con soporte de paginación y logging.
@@ -81,10 +91,7 @@ async def list_proyectos(
     filters = []
     if buscar and buscar.strip():
         term = f"%{buscar.strip()}%"
-        filters.append(or_(
-            Proyecto.codigo_proyecto.ilike(term),
-            Proyecto.titulo_proyecto.ilike(term)
-        ))
+        filters.append(or_(Proyecto.codigo_proyecto.ilike(term), Proyecto.titulo_proyecto.ilike(term)))
     if estado:
         filters.append(Proyecto.estado_proyecto == estado)
     if convocatoria:
@@ -121,30 +128,32 @@ async def list_proyectos(
         logger.info(f"No se encontraron proyectos locales para '{buscar}'. Consultando conector VRIP Proyectos...")
         try:
             from app.core.cache import normalize_query, cache_get, cache_set
-            
+
             clean_query = buscar.strip()
             normalized = normalize_query(clean_query)
             cache_key = f"vrip:search_projects:{normalized}"
-            
+
             # 1. Verificar cache
             cached_res = await cache_get(cache_key)
             if cached_res is not None:
                 logger.info(f"Cache hit para búsqueda de proyectos '{buscar}'")
                 return cached_res
-            
+
             # Cache miss: Consultar extractor
             extractor = VripProyectosExtractor()
             records = extractor.extract(query=clean_query)
-            
+
             external_items = []
             for r in records:
                 # Map to ProyectoResponse structure
-                code_ext = r.codigo_proyecto or f"EXT-{r.numero_resolucion or ''}-{r.anio_academico}".replace(" ", "").replace("/", "-")
+                code_ext = r.codigo_proyecto or f"EXT-{r.numero_resolucion or ''}-{r.anio_academico}".replace(
+                    " ", ""
+                ).replace("/", "-")
                 item_dict = {
                     "codigo_proyecto": code_ext,
                     "resolucion_aprobacion": r.numero_resolucion,
                     "titulo_proyecto": r.titulo,
-                    "tipo_proyecto": "Aplicado", # Default
+                    "tipo_proyecto": "Aplicado",  # Default
                     "tipo_programa": r.codigo_programa,
                     "facultad_proyecto": r.facultad,
                     "presupuesto_asignado": r.monto_financiado or 0.0,
@@ -156,7 +165,7 @@ async def list_proyectos(
                     "fecha_rendicion_70": None,
                     "fecha_rendicion_100": None,
                     "fecha_informe_final": None,
-                    "estado_proyecto": "Aprobado", # Default
+                    "estado_proyecto": "Aprobado",  # Default
                     "observaciones": f"Publicado en: {r.enlace_vrip}. Resumen: {r.resumen_post or ''}",
                     "created_at": datetime.now(timezone.utc),
                     "updated_at": datetime.now(timezone.utc),
@@ -169,40 +178,30 @@ async def list_proyectos(
                                 "nombres": r.responsable,
                                 "apellidos": "",
                                 "dni": "00000000",
-                                "departamento_academico": "Externo (VRIP)"
+                                "departamento_academico": "Externo (VRIP)",
                             },
-                            "dni_investigador": "00000000"
+                            "dni_investigador": "00000000",
                         }
-                    ]
+                    ],
                 }
                 external_items.append(item_dict)
-            
-            result_payload = {
-                "items": external_items,
-                "total": len(external_items),
-                "page": 1,
-                "pages": 1
-            }
-            
+
+            result_payload = {"items": external_items, "total": len(external_items), "page": 1, "pages": 1}
+
             # Guardar en cache (1 hora)
             await cache_set(cache_key, result_payload, 3600)
             return result_payload
-            
+
         except Exception as e:
             logger.error(f"Error consultando conector VRIP Proyectos / Caché: {e}", exc_info=True)
 
     duration = time.time() - t_start
     logger.info(
-        f"[SGPI-CFPI] Query completed — total={total}, returned={len(items)}, "
-        f"pages={pages}, duration={duration:.3f}s"
+        f"[SGPI-CFPI] Query completed — total={total}, returned={len(items)}, pages={pages}, duration={duration:.3f}s"
     )
 
-    return {
-        "items": items,
-        "total": total,
-        "page": page,
-        "pages": pages
-    }
+    return {"items": items, "total": total, "page": page, "pages": pages}
+
 
 @router.get("/{codigo}", response_model=ProyectoResponse)
 async def get_proyecto(codigo: str, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
@@ -216,7 +215,9 @@ async def get_proyecto(codigo: str, db: AsyncSession = Depends(get_db), current_
                 extractor = VripProyectosExtractor()
                 records = extractor.extract(query=codigo)
                 for r in records:
-                    code_ext = r.codigo_proyecto or f"EXT-{r.numero_resolucion or ''}-{r.anio_academico}".replace(" ", "").replace("/", "-")
+                    code_ext = r.codigo_proyecto or f"EXT-{r.numero_resolucion or ''}-{r.anio_academico}".replace(
+                        " ", ""
+                    ).replace("/", "-")
                     if code_ext == codigo or r.codigo_proyecto == codigo:
                         # Encontramos la coincidencia externa
                         return {
@@ -247,21 +248,24 @@ async def get_proyecto(codigo: str, db: AsyncSession = Depends(get_db), current_
                                         "nombres": r.responsable,
                                         "apellidos": "",
                                         "dni": "00000000",
-                                        "departamento_academico": "Externo (VRIP)"
+                                        "departamento_academico": "Externo (VRIP)",
                                     },
-                                    "dni_investigador": "00000000"
+                                    "dni_investigador": "00000000",
                                 }
-                            ]
+                            ],
                         }
             except Exception as e:
                 logger.error(f"Error consultando conector VRIP Proyectos en get_proyecto: {e}", exc_info=True)
-        
+
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     logger.info(f"[SGPI-CFPI] Project found: {codigo!r} — estado={p.estado_proyecto!r}")
     return p
 
+
 @router.post("/", response_model=ProyectoResponse)
-async def create_proyecto(obj_in: ProyectoCreate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+async def create_proyecto(
+    obj_in: ProyectoCreate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)
+):
     logger.info(f"[SGPI-CFPI] Creating project: codigo={obj_in.codigo_proyecto!r}, user={current_user.get('sub')!r}")
     p = await proyecto.get_by_codigo(db, codigo=obj_in.codigo_proyecto)
     if p:
@@ -273,6 +277,7 @@ async def create_proyecto(obj_in: ProyectoCreate, db: AsyncSession = Depends(get
     codigo_grupo = project_data.pop("codigo_grupo", None)
     if codigo_grupo:
         from app.models.domain import GrupoInvestigacion
+
         result_grupo = await db.execute(
             select(GrupoInvestigacion).where(GrupoInvestigacion.codigo_grupo == codigo_grupo)
         )
@@ -290,8 +295,8 @@ async def create_proyecto(obj_in: ProyectoCreate, db: AsyncSession = Depends(get
     estado_proyecto = project_data.get("estado_proyecto", "Aprobado")
     fecha_inicio = project_data.get("fecha_inicio")
     if fecha_inicio:
-        from datetime import timedelta, date as date_type
         import calendar
+
         def add_months(d, months):
             month = d.month - 1 + months
             year = d.year + month // 12
@@ -303,27 +308,33 @@ async def create_proyecto(obj_in: ProyectoCreate, db: AsyncSession = Depends(get
         h2_vence = add_months(fecha_inicio, 36)
         estado_h1 = "Pendiente" if estado_proyecto == "En ejecución" else "Bloqueado"
 
-        db.add(Entregable(
-            codigo_proyecto=obj_in.codigo_proyecto,
-            tipo_entregable="Informe Académico (12 Meses)",
-            fecha_limite_programada=h1_vence,
-            estado_entregable=estado_h1,
-        ))
-        db.add(Entregable(
-            codigo_proyecto=obj_in.codigo_proyecto,
-            tipo_entregable="Productos Entregables (36 Meses)",
-            fecha_limite_programada=h2_vence,
-            estado_entregable="Bloqueado",
-        ))
+        db.add(
+            Entregable(
+                codigo_proyecto=obj_in.codigo_proyecto,
+                tipo_entregable="Informe Académico (12 Meses)",
+                fecha_limite_programada=h1_vence,
+                estado_entregable=estado_h1,
+            )
+        )
+        db.add(
+            Entregable(
+                codigo_proyecto=obj_in.codigo_proyecto,
+                tipo_entregable="Productos Entregables (36 Meses)",
+                fecha_limite_programada=h2_vence,
+                estado_entregable="Bloqueado",
+            )
+        )
 
     # Registrar historial de estado inicial
-    db.add(ProyectoEstadoHistorial(
-        codigo_proyecto=obj_in.codigo_proyecto,
-        estado_anterior=None,
-        estado_nuevo=estado_proyecto,
-        justificacion="Proyecto creado manualmente en el sistema.",
-        id_usuario_responsable=current_user.get("sub"),
-    ))
+    db.add(
+        ProyectoEstadoHistorial(
+            codigo_proyecto=obj_in.codigo_proyecto,
+            estado_anterior=None,
+            estado_nuevo=estado_proyecto,
+            justificacion="Proyecto creado manualmente en el sistema.",
+            id_usuario_responsable=current_user.get("sub"),
+        )
+    )
 
     await db.commit()
     await db.refresh(db_proyecto)
@@ -334,27 +345,35 @@ async def create_proyecto(obj_in: ProyectoCreate, db: AsyncSession = Depends(get
         tipo_evento="INSERT",
         entidad_afectada="proyecto",
         pk_entidad=db_proyecto.codigo_proyecto,
-        valor_nuevo=obj_in.model_dump(mode='json'),
+        valor_nuevo=obj_in.model_dump(mode="json"),
         id_usuario=current_user.get("sub"),
     )
     return db_proyecto
 
 
 @router.put("/{codigo}", response_model=ProyectoResponse)
-async def update_proyecto(codigo: str, obj_in: ProyectoUpdate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    logger.info(f"[SGPI-CFPI] Updating project: codigo={codigo!r}, fields={list(obj_in.model_dump(exclude_unset=True).keys())}, user={current_user.get('sub')!r}")
+async def update_proyecto(
+    codigo: str,
+    obj_in: ProyectoUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    logger.info(
+        f"[SGPI-CFPI] Updating project: codigo={codigo!r}, fields={list(obj_in.model_dump(exclude_unset=True).keys())}, user={current_user.get('sub')!r}"
+    )
     p = await proyecto.get_by_codigo(db, codigo=codigo)
     if not p:
         logger.warning(f"[SGPI-CFPI] Update failed — project not found: {codigo!r}")
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     update_data = obj_in.model_dump(exclude_unset=True)
-    
+
     # 1. Resolver codigo_grupo → id_grupo si se recibe
     codigo_grupo = update_data.pop("codigo_grupo", None)
     if codigo_grupo is not None:
         if codigo_grupo:
             from app.models.domain import GrupoInvestigacion
+
             result_grupo = await db.execute(
                 select(GrupoInvestigacion).where(GrupoInvestigacion.codigo_grupo == codigo_grupo)
             )
@@ -372,31 +391,28 @@ async def update_proyecto(codigo: str, obj_in: ProyectoUpdate, db: AsyncSession 
     if nuevo_estado and nuevo_estado != p.estado_proyecto:
         estado_anterior = p.estado_proyecto
         p.estado_proyecto = nuevo_estado
-        
+
         hist_just = justificacion or "Validación y actualización de datos técnicos/financieros y equipo."
-        db.add(ProyectoEstadoHistorial(
-            codigo_proyecto=codigo,
-            estado_anterior=estado_anterior,
-            estado_nuevo=nuevo_estado,
-            justificacion=hist_just,
-            id_usuario_responsable=current_user.get("sub"),
-        ))
-        
+        db.add(
+            ProyectoEstadoHistorial(
+                codigo_proyecto=codigo,
+                estado_anterior=estado_anterior,
+                estado_nuevo=nuevo_estado,
+                justificacion=hist_just,
+                id_usuario_responsable=current_user.get("sub"),
+            )
+        )
+
         if nuevo_estado == "En ejecución":
             res_d = await db.execute(
-                select(Entregable)
-                .where(Entregable.codigo_proyecto == codigo)
-                .order_by(Entregable.id_entregable.asc())
+                select(Entregable).where(Entregable.codigo_proyecto == codigo).order_by(Entregable.id_entregable.asc())
             )
             deliverables = res_d.scalars().all()
             if deliverables and deliverables[0].estado_entregable.lower() == "bloqueado":
                 deliverables[0].estado_entregable = "Pendiente"
                 db.add(deliverables[0])
         elif nuevo_estado == "Concluido":
-            res_d = await db.execute(
-                select(Entregable)
-                .where(Entregable.codigo_proyecto == codigo)
-            )
+            res_d = await db.execute(select(Entregable).where(Entregable.codigo_proyecto == codigo))
             deliverables = res_d.scalars().all()
             for d in deliverables:
                 d.estado_entregable = "Completado"
@@ -417,62 +433,76 @@ async def update_proyecto(codigo: str, obj_in: ProyectoUpdate, db: AsyncSession 
     )
     return updated_p
 
+
 @router.post("/{codigo}/deliverables", response_model=EntregableResponse)
-async def create_deliverable(codigo: str, obj_in: EntregableCreate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+async def create_deliverable(
+    codigo: str,
+    obj_in: EntregableCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     p = await proyecto.get_by_codigo(db, codigo=codigo)
     if not p:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
+
     db_obj = Entregable(**obj_in.model_dump())
     db_obj.codigo_proyecto = codigo
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    
+
     await log_audit_event(
         db=db,
         tipo_evento="INSERT",
         entidad_afectada="entregable",
         pk_entidad=str(db_obj.id_entregable),
-        valor_nuevo=obj_in.model_dump(mode='json'),
+        valor_nuevo=obj_in.model_dump(mode="json"),
         id_usuario=current_user.get("sub"),
     )
     return db_obj
 
+
 @router.post("/{codigo}/investigators", response_model=InvestigadorProyectoResponse)
-async def add_investigator(codigo: str, obj_in: InvestigadorProyectoCreate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+async def add_investigator(
+    codigo: str,
+    obj_in: InvestigadorProyectoCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     p = await proyecto.get_by_codigo(db, codigo=codigo)
     if not p:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
+
     db_obj = InvestigadorProyecto(**obj_in.model_dump())
     db_obj.codigo_proyecto = codigo
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    
+
     await log_audit_event(
         db=db,
         tipo_evento="INSERT",
         entidad_afectada="investigador_proyecto",
         pk_entidad=f"{codigo}-{db_obj.dni_investigador}",
-        valor_nuevo=obj_in.model_dump(mode='json'),
+        valor_nuevo=obj_in.model_dump(mode="json"),
         id_usuario=current_user.get("sub"),
     )
     return db_obj
 
+
 @router.delete("/{codigo}/investigators")
-async def delete_project_investigators(codigo: str, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+async def delete_project_investigators(
+    codigo: str, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)
+):
     logger.info(f"[SGPI-CFPI] Removing all investigators from project: codigo={codigo!r}")
     p = await proyecto.get_by_codigo(db, codigo=codigo)
     if not p:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    
-    await db.execute(
-        delete(InvestigadorProyecto).where(InvestigadorProyecto.codigo_proyecto == codigo)
-    )
+
+    await db.execute(delete(InvestigadorProyecto).where(InvestigadorProyecto.codigo_proyecto == codigo))
     await db.commit()
     return {"status": "success", "message": "Investigadores removidos correctamente"}
+
 
 @router.patch("/{codigo}/deliverables/{id_entregable}", response_model=EntregableResponse)
 async def update_deliverable(
@@ -480,57 +510,61 @@ async def update_deliverable(
     id_entregable: int,
     obj_in: EntregableUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     logger.info(f"[SGPI-CFPI] Updating deliverable {id_entregable} for project {codigo!r}")
     result = await db.execute(
-        select(Entregable)
-        .where(Entregable.id_entregable == id_entregable)
-        .where(Entregable.codigo_proyecto == codigo)
+        select(Entregable).where(Entregable.id_entregable == id_entregable).where(Entregable.codigo_proyecto == codigo)
     )
     db_obj = result.scalars().first()
     if not db_obj:
         raise HTTPException(status_code=404, detail="Entregable no encontrado")
-        
+
     update_data = obj_in.model_dump(exclude_unset=True)
-    
+
     old_estado = db_obj.estado_entregable
     new_estado = update_data.get("estado_entregable")
-    
+
     for field, value in update_data.items():
         setattr(db_obj, field, value)
-        
+
     db.add(db_obj)
-    
+
     if new_estado == "Completado" and old_estado != "Completado":
         res_deliv = await db.execute(
-            select(Entregable)
-            .where(Entregable.codigo_proyecto == codigo)
-            .order_by(Entregable.id_entregable.asc())
+            select(Entregable).where(Entregable.codigo_proyecto == codigo).order_by(Entregable.id_entregable.asc())
         )
         deliverables = res_deliv.scalars().all()
-        
+
         if deliverables and deliverables[0].id_entregable == id_entregable:
             if len(deliverables) > 1 and deliverables[1].estado_entregable.lower() == "bloqueado":
                 deliverables[1].estado_entregable = "Pendiente"
                 db.add(deliverables[1])
-                
+
         p = await proyecto.get_by_codigo(db, codigo=codigo)
         current_status = p.estado_proyecto if p else "En ejecución"
-        db.add(ProyectoEstadoHistorial(
-            codigo_proyecto=codigo,
-            estado_anterior=current_status,
-            estado_nuevo=current_status,
-            justificacion="Recepción registrada para el hito.",
-            id_usuario_responsable=current_user.get("sub"),
-        ))
-        
+        db.add(
+            ProyectoEstadoHistorial(
+                codigo_proyecto=codigo,
+                estado_anterior=current_status,
+                estado_nuevo=current_status,
+                justificacion="Recepción registrada para el hito.",
+                id_usuario_responsable=current_user.get("sub"),
+            )
+        )
+
     await db.commit()
     await db.refresh(db_obj)
     return db_obj
 
+
 @router.patch("/{codigo}/status", response_model=ProyectoResponse, dependencies=[Depends(require_admin)])
-async def update_proyecto_status(codigo: str, obj_in: ProyectoEstadoUpdate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+async def update_proyecto_status(
+    codigo: str,
+    obj_in: ProyectoEstadoUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     logger.info(
         f"[SGPI-CFPI] Status change request: codigo={codigo!r}, "
         f"nuevo_estado={obj_in.estado_proyecto!r}, user={current_user.get('sub')!r}"
@@ -551,14 +585,11 @@ async def update_proyecto_status(codigo: str, obj_in: ProyectoEstadoUpdate, db: 
         estado_anterior=estado_anterior,
         estado_nuevo=obj_in.estado_proyecto,
         justificacion=obj_in.justificacion,
-        id_usuario_responsable=current_user.get("sub")
+        id_usuario_responsable=current_user.get("sub"),
     )
     db.add(historial)
     await db.commit()
-    logger.info(
-        f"[SGPI-CFPI] Project status changed: {codigo!r} — "
-        f"{estado_anterior!r} → {obj_in.estado_proyecto!r}"
-    )
+    logger.info(f"[SGPI-CFPI] Project status changed: {codigo!r} — {estado_anterior!r} → {obj_in.estado_proyecto!r}")
 
     await log_audit_event(
         db=db,
@@ -571,6 +602,7 @@ async def update_proyecto_status(codigo: str, obj_in: ProyectoEstadoUpdate, db: 
     )
     return updated_p
 
+
 class HitoVerifyCybertesisRequest(BaseModel):
     thesis_url: Optional[str] = None
     titulo_tesis: Optional[str] = None
@@ -578,54 +610,57 @@ class HitoVerifyCybertesisRequest(BaseModel):
     anio_publicacion: Optional[int] = None
     resumen: Optional[str] = None
 
+
 @router.post("/{codigo}/deliverables/{id_entregable}/verify-cybertesis", response_model=EntregableResponse)
 async def verify_deliverable_cybertesis(
     codigo: str,
     id_entregable: int,
     obj_in: Optional[HitoVerifyCybertesisRequest] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     logger.info(f"[SGPI-CFPI] Verifying deliverable {id_entregable} for project {codigo!r} with Cybertesis")
-    
+
     p = await proyecto.get_by_codigo(db, codigo=codigo)
     if not p:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
+
     result = await db.execute(
-        select(Entregable)
-        .where(Entregable.id_entregable == id_entregable)
-        .where(Entregable.codigo_proyecto == codigo)
+        select(Entregable).where(Entregable.id_entregable == id_entregable).where(Entregable.codigo_proyecto == codigo)
     )
     db_obj = result.scalars().first()
     if not db_obj:
         raise HTTPException(status_code=404, detail="Entregable no encontrado")
-        
+
     thesis_url = obj_in.thesis_url if obj_in else None
-    
+
     if not thesis_url:
         queries = []
         res_miembros = await db.execute(
             select(InvestigadorProyecto)
             .where(InvestigadorProyecto.codigo_proyecto == codigo)
-            .where(or_(InvestigadorProyecto.condicion_rol == "Tesista", InvestigadorProyecto.condicion_rol == "Tesista vinculado"))
+            .where(
+                or_(
+                    InvestigadorProyecto.condicion_rol == "Tesista",
+                    InvestigadorProyecto.condicion_rol == "Tesista vinculado",
+                )
+            )
         )
         tesistas = res_miembros.scalars().all()
         for t in tesistas:
             from app.models.domain import Investigador
-            res_inv = await db.execute(
-                select(Investigador).where(Investigador.dni == t.dni_investigador)
-            )
+
+            res_inv = await db.execute(select(Investigador).where(Investigador.dni == t.dni_investigador))
             inv = res_inv.scalars().first()
             if inv:
                 queries.append(f"{inv.nombres} {inv.apellidos}")
-                
+
         if not queries:
             queries.append(p.titulo_proyecto)
-            
+
         if not CybertesisAPIEngine:
             raise HTTPException(status_code=500, detail="El conector Cybertesis no está configurado.")
-            
+
         engine = CybertesisAPIEngine()
         found_thesis = None
         for q in queries:
@@ -639,13 +674,13 @@ async def verify_deliverable_cybertesis(
                     break
             except Exception as e:
                 logger.error(f"Error consultando Cybertesis para query '{q}': {e}")
-                
+
         if not found_thesis:
             raise HTTPException(
-                status_code=400, 
-                detail="No se encontró una coincidencia automática en Cybertesis. Intente buscar de forma manual."
+                status_code=400,
+                detail="No se encontró una coincidencia automática en Cybertesis. Intente buscar de forma manual.",
             )
-            
+
         thesis_url = str(found_thesis.url_repositorio)
         thesis_title = found_thesis.titulo
         thesis_author = ", ".join(found_thesis.autores)
@@ -658,10 +693,9 @@ async def verify_deliverable_cybertesis(
         thesis_abstract = obj_in.resumen or ""
 
     from app.models.domain import Tesis
+
     try:
-        res_tesis = await db.execute(
-            select(Tesis).where(Tesis.url_cybertesis == thesis_url)
-        )
+        res_tesis = await db.execute(select(Tesis).where(Tesis.url_cybertesis == thesis_url))
         local_tesis = res_tesis.scalars().first()
         if not local_tesis:
             new_tesis = Tesis(
@@ -671,7 +705,7 @@ async def verify_deliverable_cybertesis(
                 autor_estudiante_texto=thesis_author,
                 asesor_texto="No especificado",
                 anio_publicacion=thesis_year,
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(timezone.utc),
             )
             db.add(new_tesis)
             await db.flush()
@@ -684,11 +718,9 @@ async def verify_deliverable_cybertesis(
     db_obj.fecha_entrega_real = date.today()
     db_obj.archivo_url = thesis_url
     db.add(db_obj)
-    
+
     res_deliv = await db.execute(
-        select(Entregable)
-        .where(Entregable.codigo_proyecto == codigo)
-        .order_by(Entregable.id_entregable.asc())
+        select(Entregable).where(Entregable.codigo_proyecto == codigo).order_by(Entregable.id_entregable.asc())
     )
     deliverables = res_deliv.scalars().all()
     if deliverables:
@@ -704,17 +736,19 @@ async def verify_deliverable_cybertesis(
                 db.add(next_d)
 
     p_status = p.estado_proyecto if p else "En ejecución"
-    db.add(ProyectoEstadoHistorial(
-        codigo_proyecto=codigo,
-        estado_anterior=p_status,
-        estado_nuevo=p_status,
-        justificacion=f"Autoverificación con Cybertesis completada. Tesis asociada: {thesis_url}",
-        id_usuario_responsable=current_user.get("sub"),
-    ))
+    db.add(
+        ProyectoEstadoHistorial(
+            codigo_proyecto=codigo,
+            estado_anterior=p_status,
+            estado_nuevo=p_status,
+            justificacion=f"Autoverificación con Cybertesis completada. Tesis asociada: {thesis_url}",
+            id_usuario_responsable=current_user.get("sub"),
+        )
+    )
 
     await db.commit()
     await db.refresh(db_obj)
-    
+
     await log_audit_event(
         db=db,
         tipo_evento="UPDATE",
@@ -724,5 +758,5 @@ async def verify_deliverable_cybertesis(
         valor_nuevo={"estado_entregable": "Completado", "archivo_url": thesis_url},
         id_usuario=current_user.get("sub"),
     )
-    
+
     return db_obj
