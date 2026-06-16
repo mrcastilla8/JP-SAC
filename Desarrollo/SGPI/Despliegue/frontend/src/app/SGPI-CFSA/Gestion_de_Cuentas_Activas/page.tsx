@@ -425,7 +425,8 @@ export default function GestionDeCuentasActivasPage() {
         name: u.correo_institucional.split('@')[0], // Placeholder para el nombre
         role: ROLE_MAP[u.rol_sistema] || 'readonly',
         isActive: u.estado_cuenta,
-        createdAt: u.created_at
+        createdAt: u.created_at,
+        lastLogin: ''
       }));
       setUsers(mappedUsers);
     } catch (err: any) {

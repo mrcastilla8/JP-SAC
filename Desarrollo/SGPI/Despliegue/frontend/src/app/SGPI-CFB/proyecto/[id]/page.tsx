@@ -155,7 +155,7 @@ export default function ProyectoDetailPage() {
           </button>
           <ChevronRightIcon />
           <span>Búsqueda</span>
-          {query && <><ChevronRightIcon /><span className="text-on-surface">"{query}"</span></>}
+          {query && <><ChevronRightIcon /><span className="text-on-surface">&quot;{query}&quot;</span></>}
           <ChevronRightIcon />
           <span className="text-on-surface font-medium">{project.codigo}</span>
         </nav>

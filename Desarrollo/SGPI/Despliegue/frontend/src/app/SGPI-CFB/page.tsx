@@ -233,7 +233,7 @@ function ResultCard({ result, query, onClick }: {
         <p className="font-sans text-[12px] text-on-surface-variant leading-[18px] mb-3">
           {d.cargo}. Especialista en{' '}
           <HighlightText text={d.especialidad} query={query} />.{' '}
-          Directora del Grupo "<HighlightText text={d.grupo} query={query} />".
+          Directora del Grupo &quot;<HighlightText text={d.grupo} query={query} />&quot;.
         </p>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -427,14 +427,14 @@ function BusquedaGlobalPageContent() {
       firstRender.current = false;
       doSearch(filters);
     }
-  }, []);
+  }, [doSearch, filters]);
 
   // Re-buscar cuando cambia sortBy o página
   useEffect(() => {
     if (!firstRender.current) {
       doSearch({ ...filters, sortBy });
     }
-  }, [sortBy, filters.page]);
+  }, [sortBy, filters.page, doSearch, filters]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -661,7 +661,7 @@ function BusquedaGlobalPageContent() {
                   : <>
                       Se encontraron{' '}
                       <span className="font-bold text-on-surface">{response.total}</span>{' '}
-                      coincidencias{filters.query && <> para <span className="font-bold text-on-surface">"{filters.query}"</span></>}
+                      coincidencias{filters.query && <> para <span className="font-bold text-on-surface">&quot;{filters.query}&quot;</span></>}
                     </>
                 }
               </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/SGPI-CFU/components/layout';
 import { PageHeader } from '@/SGPI-CFU/components/shared';
@@ -19,7 +19,7 @@ export default function CuarentenaPage() {
   const [entidad, setEntidad] = useState('');
   const [page, setPage] = useState(1);
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -30,11 +30,11 @@ export default function CuarentenaPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, estado, entidad]);
 
   useEffect(() => {
     fetchList();
-  }, [page, estado, entidad]);
+  }, [fetchList]);
 
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [dniMap, setDniMap] = useState<Record<number, string>>({});
