@@ -9,12 +9,9 @@ from sgpi_capiac.schemas.capiac_schemas import UsuarioResponse, UsuarioCreate, U
 
 router = APIRouter()
 
+
 @router.get("", response_model=List[UsuarioResponse])
-async def read_usuarios(
-    db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100
-) -> Any:
+async def read_usuarios(db: AsyncSession = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
     """
     Recupera todos los usuarios.
     """
@@ -34,13 +31,11 @@ async def create_usuario(
     """
     # TODO: Integrar current_user
     current_user_id = None
-    
+
     # Validar si ya existe el correo
     try:
         usuario_creado = await crud_usuario.usuario.create_with_auth(
-            db=db, 
-            obj_in=usuario_in, 
-            current_user_id=current_user_id
+            db=db, obj_in=usuario_in, current_user_id=current_user_id
         )
         return usuario_creado
     except Exception as e:
@@ -63,16 +58,13 @@ async def toggle_estado_usuario(
     """
     # TODO: Integrar current_user
     current_user_id = None
-    
+
     usuario_actualizado = await crud_usuario.usuario.update_status(
-        db=db, 
-        id_usuario=id_usuario, 
-        is_active=is_active, 
-        current_user_id=current_user_id
+        db=db, id_usuario=id_usuario, is_active=is_active, current_user_id=current_user_id
     )
     if not usuario_actualizado:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        
+
     return usuario_actualizado
 
 

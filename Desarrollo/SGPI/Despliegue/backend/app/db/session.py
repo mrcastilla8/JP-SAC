@@ -17,15 +17,15 @@ from app.core.config import settings
 # de sentencias de asyncpg para evitar errores con pgBouncer.
 # ---------------------------------------------------------------------------
 _engine_kwargs = {
-    "echo": settings.ENVIRONMENT == "development",   # SQL visible sólo en dev
+    "echo": settings.ENVIRONMENT == "development",  # SQL visible sólo en dev
     "future": True,
-    "pool_pre_ping": True,      # Descarta conexiones muertas antes de usarlas
-    "pool_size": 5,             # Conexiones mantenidas en el pool
-    "max_overflow": 10,         # Conexiones adicionales en pico de carga
-    "pool_timeout": 30,         # Segundos de espera antes de lanzar error
-    "pool_recycle": 1800,       # Recicla conexiones cada 30 min
+    "pool_pre_ping": True,  # Descarta conexiones muertas antes de usarlas
+    "pool_size": 5,  # Conexiones mantenidas en el pool
+    "max_overflow": 10,  # Conexiones adicionales en pico de carga
+    "pool_timeout": 30,  # Segundos de espera antes de lanzar error
+    "pool_recycle": 1800,  # Recicla conexiones cada 30 min
     "connect_args": {
-        "statement_cache_size": 0,      # Requerido por pgBouncer transaction mode
+        "statement_cache_size": 0,  # Requerido por pgBouncer transaction mode
         "prepared_statement_cache_size": 0,
     },
 }

@@ -1,10 +1,15 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
+
 class SearchRequest(BaseModel):
     q: str = Field(..., min_length=3, description="Search query string (at least 3 characters)")
-    category: Optional[List[str]] = Field(default=None, description="Filter by categories (Investigador, Proyecto, Grupo, Publicacion, Tesis)")
-    source: Optional[List[str]] = Field(default=None, description="Filter by data sources (RAIS, RENACYT, Cybertesis, Manual)")
+    category: Optional[List[str]] = Field(
+        default=None, description="Filter by categories (Investigador, Proyecto, Grupo, Publicacion, Tesis)"
+    )
+    source: Optional[List[str]] = Field(
+        default=None, description="Filter by data sources (RAIS, RENACYT, Cybertesis, Manual)"
+    )
     status: Optional[List[str]] = Field(default=None, description="Filter by state / status")
     anio_inicio: Optional[int] = Field(default=None, description="Filter from this year (inclusive)")
     anio_fin: Optional[int] = Field(default=None, description="Filter until this year (inclusive)")
@@ -15,6 +20,7 @@ class SearchRequest(BaseModel):
     live_renacyt: bool = Field(default=False, description="Force live query through RENACYT connector")
     live_cybertesis: bool = Field(default=False, description="Force live query through Cybertesis connector")
 
+
 class UnifiedSearchItem(BaseModel):
     id: str = Field(..., description="Unique identifier of the entity")
     title: str = Field(..., description="Main title or name of the entity")
@@ -23,6 +29,7 @@ class UnifiedSearchItem(BaseModel):
     status: Optional[str] = Field(default=None, description="Current operational state or status")
     date: Optional[str] = Field(default=None, description="Associated date (as YYYY-MM-DD or year)")
     details: Dict[str, Any] = Field(default_factory=dict, description="Metadata dictionary specific to each category")
+
 
 class SearchResponse(BaseModel):
     total_results: int = Field(..., description="Total matching records found")
