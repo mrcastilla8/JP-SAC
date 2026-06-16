@@ -9,38 +9,46 @@ from renacyt_connector.utils import normalize_researcher_record
 # Setup default logger
 logger = logging.getLogger("renacyt_connector")
 
+
 class RenacytError(Exception):
     """Base exception for RENACYT connector errors."""
+
     pass
+
 
 class RenacytConnectionError(RenacytError):
     """Raised when there are connection failures or all endpoints are down."""
+
     pass
+
 
 class RenacytAPIError(RenacytError):
     """Raised when the API returns an error or invalid status code."""
+
     pass
+
 
 class RenacytConnector:
     """
     A robust, zero-dependency client to query the CONCYTEC RENACYT database.
     Supports connection failovers, custom SSL settings, retries, and rate limiting.
     """
+
     DEFAULT_BASE_URLS = [
         "https://renacyt.concytec.gob.pe/renacyt-backend",
-        "https://ctivitae.concytec.gob.pe/renacyt-backend"
+        "https://ctivitae.concytec.gob.pe/renacyt-backend",
     ]
-    
+
     DEFAULT_HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
-    
+
     def __init__(self, base_urls=None, verify_ssl=False, rate_limit_delay=1.0, timeout=15, max_retries=3):
         """
         Initializes the RENACYT connector.
-        
+
         :param base_urls: List of base URLs to use (with fallback order).
         :param verify_ssl: If False, skips SSL certificate validation (highly recommended for Peruvian gov sites).
         :param rate_limit_delay: Sleep time in seconds after any successful request to prevent server bans.
@@ -50,12 +58,12 @@ class RenacytConnector:
         self.base_urls = base_urls or self.DEFAULT_BASE_URLS
         if isinstance(self.base_urls, str):
             self.base_urls = [self.base_urls]
-            
+
         self.verify_ssl = verify_ssl
         self.rate_limit_delay = rate_limit_delay
         self.timeout = timeout
         self.max_retries = max_retries
-        
+
         # Configure SSL Context
         if not self.verify_ssl:
             self.ssl_context = ssl.create_default_context()
@@ -63,14 +71,14 @@ class RenacytConnector:
             self.ssl_context.verify_mode = ssl.CERT_NONE
         else:
             self.ssl_context = ssl.create_default_context()
-            
+
         self._last_request_time = 0.0
 
     async def _apply_rate_limit(self):
         """Applies a polite sleep if the last query happened too recently."""
         if self.rate_limit_delay <= 0:
             return
-            
+
         elapsed = time.time() - self._last_request_time
         if elapsed < self.rate_limit_delay:
             sleep_time = self.rate_limit_delay - elapsed
@@ -82,10 +90,10 @@ class RenacytConnector:
         Executes an HTTP request with built-in retries, failovers, and rate limiting.
         """
         await self._apply_rate_limit()
-        
+
         # Keep track of errors across all endpoints to raise a descriptive exception if everything fails
         all_errors = []
-        
+
         # httpx takes verification argument: verify_ssl or ssl_context
         # If verify_ssl is False, pass verify=False, else verify=True or the ssl_context
         verify_param = self.ssl_context if not self.verify_ssl else True
@@ -93,53 +101,52 @@ class RenacytConnector:
         async with httpx.AsyncClient(verify=verify_param, timeout=self.timeout) as client:
             for base_url in self.base_urls:
                 url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
-                
+
                 for attempt in range(1, self.max_retries + 1):
                     logger.info(f"Connecting to: {url} (Attempt {attempt}/{self.max_retries})")
-                    
+
                     try:
                         response = await client.request(
-                            method=method,
-                            url=url,
-                            json=payload,
-                            headers=self.DEFAULT_HEADERS
+                            method=method, url=url, json=payload, headers=self.DEFAULT_HEADERS
                         )
                         self._last_request_time = time.time()
-                        
+
                         # Handle client-side errors immediately as before
                         if 400 <= response.status_code < 500:
-                            raise RenacytAPIError(f"Client API Request Error: HTTP Error {response.status_code} on {url}")
-                        
+                            raise RenacytAPIError(
+                                f"Client API Request Error: HTTP Error {response.status_code} on {url}"
+                            )
+
                         response.raise_for_status()
-                        
+
                         try:
                             return response.json()
                         except (json.JSONDecodeError, ValueError) as je:
                             raise RenacytAPIError(f"Server returned invalid JSON format: {je}")
-                                
+
                     except httpx.HTTPStatusError as he:
                         status = he.response.status_code
                         err_msg = f"HTTP Error {status} on {url}"
                         logger.warning(err_msg)
                         all_errors.append(err_msg)
-                        
+
                     except httpx.RequestError as ce:
                         err_msg = f"Connection Error on {url}: {ce}"
                         logger.warning(err_msg)
                         all_errors.append(err_msg)
-                        
+
                     # Exponential backoff for retries of the current endpoint
                     if attempt < self.max_retries:
                         backoff = attempt * 2.0
                         logger.debug(f"Retrying in {backoff} seconds...")
                         await asyncio.sleep(backoff)
-                
+
                 # If we reach here, this base_url failed after max_retries. Let's try the next endpoint in line.
                 logger.warning(f"Endpoint {base_url} failed all attempts. Trying next fallback URL...")
 
         # If we exhausted all base URLs and attempts
         raise RenacytConnectionError(
-            f"Failed to execute request on all endpoints. Technical logs:\n" + "\n".join(all_errors)
+            "Failed to execute request on all endpoints. Technical logs:\n" + "\n".join(all_errors)
         )
 
     @property
@@ -152,7 +159,7 @@ class RenacytConnector:
     async def search(self, criteria, page=1, page_size=10, normalize=True):
         """
         Queries the RENACYT database using a list of filter criteria.
-        
+
         :param criteria: List of dict criteria fields.
         :param page: The page number (1-indexed).
         :param page_size: Quantity of records per page.
@@ -162,9 +169,9 @@ class RenacytConnector:
         # Ensure criteria is a list (if empty list, it fetches all)
         if not isinstance(criteria, list):
             raise RenacytError("Criteria must be a list of filter dictionaries.")
-            
+
         reglamentos = [21, 22, 23, 24, 25, 26, 27]
-        
+
         async def fetch_reglamento(reg):
             endpoint = f"actoRegistral/obtenerActosRegistralesActivos/reglamento/{reg}/pagina/{page}/numeroRegistros/{page_size}"
             async with self.semaphore:
@@ -177,18 +184,18 @@ class RenacytConnector:
 
         tasks = [fetch_reglamento(reg) for reg in reglamentos]
         results = await asyncio.gather(*tasks)
-        
+
         combined_data = []
         total = 0
         success_count = 0
         last_error = None
         empty_res = None
-        
+
         for reg, res, err in results:
             if err:
                 last_error = err
                 continue
-            
+
             success_count += 1
             if res and isinstance(res, dict):
                 data = res.get("data", [])
@@ -197,13 +204,13 @@ class RenacytConnector:
                     combined_data.extend(data)
                 elif empty_res is None:
                     empty_res = res
-                    
+
         # If all reglamentos failed, raise the last error (or RenacytAPIError)
         if success_count == 0:
             if last_error:
                 raise last_error
             raise RenacytAPIError("Expected dictionary response containing 'total' and 'data'.")
-            
+
         # Deduplicate raw records by unique fields
         deduped_data = []
         seen = set()
@@ -218,21 +225,15 @@ class RenacytConnector:
                     deduped_data.append(record)
             else:
                 deduped_data.append(record)
-                
+
         # Limit to page_size
         paginated_data = deduped_data[:page_size]
-        
+
         if normalize:
             normalized_data = [normalize_researcher_record(item) for item in paginated_data]
-            return {
-                "total": total,
-                "data": normalized_data
-            }
-            
-        return {
-            "total": total,
-            "data": paginated_data
-        }
+            return {"total": total, "data": normalized_data}
+
+        return {"total": total, "data": paginated_data}
 
     async def search_by_dni(self, dni, normalize=True):
         """
@@ -246,10 +247,10 @@ class RenacytConnector:
                 "campo": "a.numero_documento",
                 "valor": clean_dni,
                 "operadorBusqueda": "=",
-                "operadorLogico": "and"
+                "operadorLogico": "and",
             }
         ]
-        
+
         res = await self.search(criteria, page=1, page_size=1, normalize=normalize)
         if res["total"] > 0 and len(res["data"]) > 0:
             return res["data"][0]
@@ -262,15 +263,9 @@ class RenacytConnector:
         """
         clean_orcid = str(orcid).strip()
         criteria = [
-            {
-                "id": 15,
-                "campo": "b.id_orcid",
-                "valor": clean_orcid,
-                "operadorBusqueda": "=",
-                "operadorLogico": "and"
-            }
+            {"id": 15, "campo": "b.id_orcid", "valor": clean_orcid, "operadorBusqueda": "=", "operadorLogico": "and"}
         ]
-        
+
         res = await self.search(criteria, page=1, page_size=1, normalize=normalize)
         if res["total"] > 0 and len(res["data"]) > 0:
             return res["data"][0]
@@ -288,10 +283,10 @@ class RenacytConnector:
                 "campo": "a.codigo_registro",
                 "valor": clean_code,
                 "operadorBusqueda": "=",
-                "operadorLogico": "and"
+                "operadorLogico": "and",
             }
         ]
-        
+
         res = await self.search(criteria, page=1, page_size=1, normalize=normalize)
         if res["total"] > 0 and len(res["data"]) > 0:
             return res["data"][0]
@@ -304,15 +299,9 @@ class RenacytConnector:
         """
         clean_name = str(name).strip()
         criteria = [
-            {
-                "id": 4,
-                "campo": "a.nombres",
-                "valor": clean_name,
-                "operadorBusqueda": "ilike",
-                "operadorLogico": "and"
-            }
+            {"id": 4, "campo": "a.nombres", "valor": clean_name, "operadorBusqueda": "ilike", "operadorLogico": "and"}
         ]
-        
+
         return await self.search(criteria, page=page, page_size=page_size, normalize=normalize)
 
     async def search_by_institution(self, institution, page=1, page_size=10, normalize=True):
@@ -327,10 +316,10 @@ class RenacytConnector:
                 "campo": "a.institucion_laboral_principal",
                 "valor": clean_inst,
                 "operadorBusqueda": "ilike",
-                "operadorLogico": "and"
+                "operadorLogico": "and",
             }
         ]
-        
+
         return await self.search(criteria, page=page, page_size=page_size, normalize=normalize)
 
     async def search_by_lastname(self, lastname, page=1, page_size=10, normalize=True):
@@ -343,7 +332,7 @@ class RenacytConnector:
         words = [w.strip() for w in clean_lastname.split() if w.strip()]
         if not words:
             raise RenacytError("Last name query cannot be empty.")
-            
+
         if len(words) >= 2:
             # Match first word as paternal and second word as maternal
             criteria = [
@@ -352,15 +341,15 @@ class RenacytConnector:
                     "campo": "a.apellido_paterno",
                     "valor": words[0],
                     "operadorBusqueda": "ilike",
-                    "operadorLogico": "and"
+                    "operadorLogico": "and",
                 },
                 {
                     "id": 999,
                     "campo": "a.apellido_materno",
                     "valor": words[1],
                     "operadorBusqueda": "ilike",
-                    "operadorLogico": "and"
-                }
+                    "operadorLogico": "and",
+                },
             ]
         else:
             # Single word: match either paternal OR maternal
@@ -370,17 +359,17 @@ class RenacytConnector:
                     "campo": "a.apellido_paterno",
                     "valor": words[0],
                     "operadorBusqueda": "ilike",
-                    "operadorLogico": "or"
+                    "operadorLogico": "or",
                 },
                 {
                     "id": 999,
                     "campo": "a.apellido_materno",
                     "valor": words[0],
                     "operadorBusqueda": "ilike",
-                    "operadorLogico": "and"
-                }
+                    "operadorLogico": "and",
+                },
             ]
-            
+
         return await self.search(criteria, page=page, page_size=page_size, normalize=normalize)
 
     async def search_by_fullname(self, fullname, page=1, page_size=10, normalize=True):
@@ -404,23 +393,25 @@ class RenacytConnector:
             keys = list(fields_dict.keys())
             for i, key in enumerate(keys):
                 field_id = 4 if key == "a.nombres" else 999
-                crit.append({
-                    "id": field_id,
-                    "campo": key,
-                    "valor": fields_dict[key],
-                    "operadorBusqueda": "ilike",
-                    "operadorLogico": "and"
-                })
+                crit.append(
+                    {
+                        "id": field_id,
+                        "campo": key,
+                        "valor": fields_dict[key],
+                        "operadorBusqueda": "ilike",
+                        "operadorLogico": "and",
+                    }
+                )
             candidate_criterias.append(crit)
 
         # 1. Whole query as name
         add_crit({"a.nombres": clean_fullname})
-        
+
         # 2. Single word searches
         if len(words) == 1:
             add_crit({"a.apellido_paterno": words[0]})
             add_crit({"a.apellido_materno": words[0]})
-        
+
         # 3. Two words A B
         elif len(words) == 2:
             # Surnames: paternal A, maternal B
@@ -433,7 +424,7 @@ class RenacytConnector:
             add_crit({"a.apellido_paterno": words[0], "a.nombres": words[1]})
             # Maternal A, Name B
             add_crit({"a.apellido_materno": words[0], "a.nombres": words[1]})
-            
+
         # 4. Three words A B C
         elif len(words) == 3:
             # Name A B, paternal C
@@ -456,7 +447,9 @@ class RenacytConnector:
         # 5. Four or more words
         if len(words) >= 4:
             # Full Name A B, paternal C, maternal D
-            add_crit({"a.nombres": f"{words[0]} {words[1]}", "a.apellido_paterno": words[2], "a.apellido_materno": words[3]})
+            add_crit(
+                {"a.nombres": f"{words[0]} {words[1]}", "a.apellido_paterno": words[2], "a.apellido_materno": words[3]}
+            )
             # First Name A, paternal C, maternal D
             add_crit({"a.nombres": words[0], "a.apellido_paterno": words[2], "a.apellido_materno": words[3]})
             # Middle Name B, paternal C, maternal D
@@ -511,9 +504,4 @@ class RenacytConnector:
         end_idx = start_idx + page_size
         paginated_data = deduped_data[start_idx:end_idx]
 
-        return {
-            "total": len(deduped_data),
-            "data": paginated_data
-        }
-
-
+        return {"total": len(deduped_data), "data": paginated_data}

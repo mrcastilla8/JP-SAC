@@ -6,6 +6,7 @@ import pandas as pd
 
 class InvalidFormatError(Exception):
     """[EX1] El archivo no tiene una extensión válida (.csv o .xlsx)."""
+
     pass
 
 
@@ -38,16 +39,11 @@ class FileEngine:
         resolved = Path(path).resolve()
 
         if not resolved.exists():
-            raise FileNotFoundError(
-                f"Archivo no encontrado: '{resolved}'"
-            )
+            raise FileNotFoundError(f"Archivo no encontrado: '{resolved}'")
 
         ext = resolved.suffix.lower()
         if ext not in self.SUPPORTED_EXTENSIONS:
-            raise InvalidFormatError(
-                f"[EX1] Formato no soportado: '{ext}'. "
-                f"Por favor, suba un archivo .csv o .xlsx"
-            )
+            raise InvalidFormatError(f"[EX1] Formato no soportado: '{ext}'. Por favor, suba un archivo .csv o .xlsx")
 
         try:
             if ext == ".xlsx":
@@ -75,6 +71,4 @@ class FileEngine:
         except (InvalidFormatError, FileNotFoundError):
             raise
         except Exception as e:
-            raise RuntimeError(
-                f"Error al leer '{resolved.name}': {e}"
-            ) from e
+            raise RuntimeError(f"Error al leer '{resolved.name}': {e}") from e

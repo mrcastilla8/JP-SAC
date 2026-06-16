@@ -1,82 +1,91 @@
 from sqlalchemy import text
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, Text, ForeignKey, Numeric, JSON, Date
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 import uuid
 
 Base = declarative_base()
 
+
 class Usuario(Base):
-    __tablename__ = 'usuario'
+    __tablename__ = "usuario"
     id_usuario = Column(UUID(as_uuid=True), primary_key=True)
     correo_institucional = Column(String(255), nullable=False, unique=True)
     rol_sistema = Column(String(50), nullable=False)
     estado_cuenta = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class Investigador(Base):
-    __tablename__ = 'investigador'
+    __tablename__ = "investigador"
     dni = Column(String(15), primary_key=True)
     nombres = Column(String(100), nullable=False)
     apellidos = Column(String(150), nullable=False)
     codigo_interno_vrip = Column(String(50))
     condicion_laboral = Column(String(50))
     departamento_academico = Column(String(100), nullable=False)
-    facultad_dependencia = Column(String(100), default='Ingeniería de Sistemas e Informática')
+    facultad_dependencia = Column(String(100), default="Ingeniería de Sistemas e Informática")
     grado_academico_max = Column(String(100))
     institucion_principal = Column(String(150))
     codigo_renacyt = Column(String(50), unique=True)
     orcid = Column(String(50))
-    categoria_renacyt = Column(String(50), default='No Clasificado')
+    categoria_renacyt = Column(String(50), default="No Clasificado")
     estado_renacyt = Column(String(50))
     url_cti_vitae = Column(String(255))
     investigador_sm = Column(Boolean, default=False)
-    estado_vigencia = Column(String(20), nullable=False, default='Activo')
+    estado_vigencia = Column(String(20), nullable=False, default="Activo")
     tiene_deuda_gi = Column(Boolean, default=False)
     tiene_deuda_pi = Column(Boolean, default=False)
     is_external = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
+
 
 class GrupoInvestigacion(Base):
-    __tablename__ = 'grupo_investigacion'
+    __tablename__ = "grupo_investigacion"
     id_grupo = Column(Integer, primary_key=True, autoincrement=True)
     codigo_grupo = Column(String(50), unique=True, nullable=False)
     nombre_grupo = Column(Text, nullable=False)
     siglas = Column(String(20))
     descripcion = Column(Text)
-    facultad = Column(String(100), default='Ingeniería de Sistemas e Informática')
-    dni_coordinador = Column(String(15), ForeignKey('investigador.dni', ondelete='SET NULL'))
+    facultad = Column(String(100), default="Ingeniería de Sistemas e Informática")
+    dni_coordinador = Column(String(15), ForeignKey("investigador.dni", ondelete="SET NULL"))
     correo_coordinador = Column(String(255))
     lineas_investigacion = Column(JSON)
     fecha_reconocimiento = Column(Date)
     url_vrip = Column(String(255))
-    estado_grupo = Column(String(50), default='Activo')
+    estado_grupo = Column(String(50), default="Activo")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class MiembroGrupo(Base):
-    __tablename__ = 'miembro_grupo'
+    __tablename__ = "miembro_grupo"
     id_membresia = Column(Integer, primary_key=True, autoincrement=True)
-    id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='CASCADE'))
-    dni_investigador = Column(String(15), ForeignKey('investigador.dni', ondelete='CASCADE'))
+    id_grupo = Column(Integer, ForeignKey("grupo_investigacion.id_grupo", ondelete="CASCADE"))
+    dni_investigador = Column(String(15), ForeignKey("investigador.dni", ondelete="CASCADE"))
     condicion_miembro = Column(String(50), nullable=False)
-    estado_membresia = Column(String(20), default='Activo')
+    estado_membresia = Column(String(20), default="Activo")
     fecha_incorporacion = Column(Date)
     fecha_salida = Column(Date)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
+
 
 class Proyecto(Base):
-    __tablename__ = 'proyecto'
+    __tablename__ = "proyecto"
     codigo_proyecto = Column(String(50), primary_key=True)
     resolucion_aprobacion = Column(String(100), unique=True)
     titulo_proyecto = Column(Text, nullable=False)
     tipo_proyecto = Column(String(50))
     tipo_programa = Column(String(20))
-    facultad_proyecto = Column(String(100), default='Ingeniería de Sistemas e Informática')
+    facultad_proyecto = Column(String(100), default="Ingeniería de Sistemas e Informática")
     presupuesto_asignado = Column(Numeric(12, 2), default=0.00)
-    id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='SET NULL'))
+    id_grupo = Column(Integer, ForeignKey("grupo_investigacion.id_grupo", ondelete="SET NULL"))
     area_academica = Column(String(100))
     anio_convocatoria = Column(Integer)
     fecha_inicio = Column(Date)
@@ -84,61 +93,70 @@ class Proyecto(Base):
     fecha_rendicion_70 = Column(Date)
     fecha_rendicion_100 = Column(Date)
     fecha_informe_final = Column(Date)
-    estado_proyecto = Column(String(50), nullable=False, default='Aprobado')
+    estado_proyecto = Column(String(50), nullable=False, default="Aprobado")
     observaciones = Column(Text)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
+
 
 class Entregable(Base):
-    __tablename__ = 'entregable'
+    __tablename__ = "entregable"
     id_entregable = Column(Integer, primary_key=True, autoincrement=True)
-    codigo_proyecto = Column(String(50), ForeignKey('proyecto.codigo_proyecto', ondelete='CASCADE'))
+    codigo_proyecto = Column(String(50), ForeignKey("proyecto.codigo_proyecto", ondelete="CASCADE"))
     tipo_entregable = Column(String(100), nullable=False)
     fecha_limite_programada = Column(Date)
     fecha_entrega_real = Column(Date)
-    estado_entregable = Column(String(50), default='Pendiente')
+    estado_entregable = Column(String(50), default="Pendiente")
     archivo_url = Column(String(255))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
+
 
 class LogAuditoria(Base):
-    __tablename__ = 'log_auditoria'
+    __tablename__ = "log_auditoria"
     id_log = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tipo_evento = Column(String(50), nullable=False)
     entidad_afectada = Column(String(100))
     pk_entidad = Column(String(100))
     valor_anterior = Column(JSON)
     valor_nuevo = Column(JSON)
-    id_usuario = Column(UUID(as_uuid=True), ForeignKey('usuario.id_usuario', ondelete='SET NULL'))
+    id_usuario = Column(UUID(as_uuid=True), ForeignKey("usuario.id_usuario", ondelete="SET NULL"))
     ip_origen = Column(String(50))
-    resultado = Column(String(20), nullable=False, default='Exito')
+    resultado = Column(String(20), nullable=False, default="Exito")
     detalle_error = Column(Text)
     timestamp_evento = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class InvestigadorProyecto(Base):
-    __tablename__ = 'investigador_proyecto'
-    codigo_proyecto = Column(String(50), ForeignKey('proyecto.codigo_proyecto', ondelete='CASCADE'), primary_key=True)
-    dni_investigador = Column(String(15), ForeignKey('investigador.dni', ondelete='CASCADE'), primary_key=True)
+    __tablename__ = "investigador_proyecto"
+    codigo_proyecto = Column(String(50), ForeignKey("proyecto.codigo_proyecto", ondelete="CASCADE"), primary_key=True)
+    dni_investigador = Column(String(15), ForeignKey("investigador.dni", ondelete="CASCADE"), primary_key=True)
     condicion_rol = Column(String(100), nullable=False)
     tipo_vinculo = Column(String(100))
     facultad_integrante = Column(String(100))
     condicion_gi = Column(String(100))
 
+
 class Convocatoria(Base):
-    __tablename__ = 'convocatoria'
+    __tablename__ = "convocatoria"
     id_convocatoria = Column(Integer, primary_key=True, autoincrement=True)
     resolucion_base = Column(String(100), unique=True)
     titulo_convocatoria = Column(Text, nullable=False)
-    entidad_emisora = Column(String(100), default='VRIP-UNMSM')
+    entidad_emisora = Column(String(100), default="VRIP-UNMSM")
     presupuesto_maximo = Column(Numeric(12, 2))
     fecha_inicio_inscripcion = Column(Date)
     fecha_cierre = Column(Date)
     url_bases_vrip = Column(String(255))
     cambios_cronograma = Column(JSON)
-    estado_convocatoria = Column(String(50), default='Abierta')
+    estado_convocatoria = Column(String(50), default="Abierta")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class Publicacion(Base):
-    __tablename__ = 'publicacion'
+    __tablename__ = "publicacion"
     id_publicacion = Column(Integer, primary_key=True, autoincrement=True)
     doi_codigo = Column(String(100), unique=True)
     titulo_articulo = Column(Text, nullable=False)
@@ -151,19 +169,21 @@ class Publicacion(Base):
     indexacion = Column(String(100))
     fecha_publicacion = Column(Date)
     url_documento = Column(String(255))
-    id_grupo = Column(Integer, ForeignKey('grupo_investigacion.id_grupo', ondelete='SET NULL'))
-    estado_validacion = Column(String(50), default='Pendiente')
-    fuente_origen = Column(String(50), default='MANUAL')
+    id_grupo = Column(Integer, ForeignKey("grupo_investigacion.id_grupo", ondelete="SET NULL"))
+    estado_validacion = Column(String(50), default="Pendiente")
+    fuente_origen = Column(String(50), default="MANUAL")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class InvestigadorPublicacion(Base):
-    __tablename__ = 'investigador_publicacion'
-    dni_investigador = Column(String(15), ForeignKey('investigador.dni', ondelete='CASCADE'), primary_key=True)
-    id_publicacion = Column(Integer, ForeignKey('publicacion.id_publicacion', ondelete='CASCADE'), primary_key=True)
+    __tablename__ = "investigador_publicacion"
+    dni_investigador = Column(String(15), ForeignKey("investigador.dni", ondelete="CASCADE"), primary_key=True)
+    id_publicacion = Column(Integer, ForeignKey("publicacion.id_publicacion", ondelete="CASCADE"), primary_key=True)
     filiacion_unmsm = Column(Boolean, default=True)
 
+
 class Tesis(Base):
-    __tablename__ = 'tesis'
+    __tablename__ = "tesis"
     url_cybertesis = Column(String(255), primary_key=True)
     titulo_tesis = Column(Text, nullable=False)
     resumen_abstract = Column(Text)
@@ -179,7 +199,7 @@ class Tesis(Base):
     autor_estudiante_texto = Column(String(200), nullable=False)
     dni_tesista = Column(String(15))
     asesor_texto = Column(String(200), nullable=False)
-    dni_asesor = Column(String(15), ForeignKey('investigador.dni', ondelete='SET NULL'))
+    dni_asesor = Column(String(15), ForeignKey("investigador.dni", ondelete="SET NULL"))
     orcid_asesor = Column(String(255))
     codigo_disciplina = Column(String(50))
     nivel_grado = Column(String(100))
@@ -191,56 +211,63 @@ class Tesis(Base):
     pais_publicacion = Column(String(10))
     palabras_clave = Column(JSON)
     jurados_evaluadores = Column(JSON)
-    estado_validacion = Column(String(50), default='Pendiente')
-    fuente_origen = Column(String(50), default='CYBERTESIS')
+    estado_validacion = Column(String(50), default="Pendiente")
+    fuente_origen = Column(String(50), default="CYBERTESIS")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class ProyectoEstadoHistorial(Base):
-    __tablename__ = 'proyecto_estado_historial'
+    __tablename__ = "proyecto_estado_historial"
     id_historial = Column(Integer, primary_key=True, index=True)
-    codigo_proyecto = Column(String(50), ForeignKey('proyecto.codigo_proyecto', ondelete='CASCADE'))
+    codigo_proyecto = Column(String(50), ForeignKey("proyecto.codigo_proyecto", ondelete="CASCADE"))
     estado_anterior = Column(String(50))
     estado_nuevo = Column(String(50), nullable=False)
     justificacion = Column(Text, nullable=False)
-    id_usuario_responsable = Column(UUID(as_uuid=True), ForeignKey('usuario.id_usuario', ondelete='SET NULL'))
-    fecha_cambio = Column(DateTime(timezone=True), server_default=text('now()'))
+    id_usuario_responsable = Column(UUID(as_uuid=True), ForeignKey("usuario.id_usuario", ondelete="SET NULL"))
+    fecha_cambio = Column(DateTime(timezone=True), server_default=text("now()"))
+
 
 class EvidenciaDifusion(Base):
-    __tablename__ = 'evidencia_difusion'
+    __tablename__ = "evidencia_difusion"
     id_evidencia = Column(Integer, primary_key=True, index=True)
-    id_convocatoria = Column(Integer, ForeignKey('convocatoria.id_convocatoria', ondelete='CASCADE'))
+    id_convocatoria = Column(Integer, ForeignKey("convocatoria.id_convocatoria", ondelete="CASCADE"))
     tipo_evidencia = Column(String(100))
     nombre_archivo = Column(String(255), nullable=False)
     url_archivo = Column(String(255), nullable=False)
-    id_usuario_carga = Column(UUID(as_uuid=True), ForeignKey('usuario.id_usuario', ondelete='SET NULL'))
-    fecha_carga = Column(DateTime(timezone=True), server_default=text('now()'))
+    id_usuario_carga = Column(UUID(as_uuid=True), ForeignKey("usuario.id_usuario", ondelete="SET NULL"))
+    fecha_carga = Column(DateTime(timezone=True), server_default=text("now()"))
+
 
 class ReconciliacionPendiente(Base):
-    __tablename__ = 'reconciliacion_pendientes'
+    __tablename__ = "reconciliacion_pendientes"
     id_pendiente = Column(Integer, primary_key=True, autoincrement=True)
-    entidad_afectada = Column(String(50), nullable=False) # e.g., investigador, proyecto
-    llave_primaria_sugerida = Column(String(100)) # e.g., DNI, DOI
-    fuentes_involucradas = Column(JSON, nullable=False) # ej. ["RAIS", "RENACYT"]
-    datos_conflicto = Column(JSON, nullable=False) # payload completo con la diferencia
-    motivo_cuarentena = Column(Text, nullable=False) # por qué no se reconcilió
-    estado = Column(String(50), default='Pendiente') # Pendiente, Aprobado, Rechazado
-    id_usuario_revisor = Column(UUID(as_uuid=True), ForeignKey('usuario.id_usuario', ondelete='SET NULL'))
+    entidad_afectada = Column(String(50), nullable=False)  # e.g., investigador, proyecto
+    llave_primaria_sugerida = Column(String(100))  # e.g., DNI, DOI
+    fuentes_involucradas = Column(JSON, nullable=False)  # ej. ["RAIS", "RENACYT"]
+    datos_conflicto = Column(JSON, nullable=False)  # payload completo con la diferencia
+    motivo_cuarentena = Column(Text, nullable=False)  # por qué no se reconcilió
+    estado = Column(String(50), default="Pendiente")  # Pendiente, Aprobado, Rechazado
+    id_usuario_revisor = Column(UUID(as_uuid=True), ForeignKey("usuario.id_usuario", ondelete="SET NULL"))
     fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     fecha_revision = Column(DateTime(timezone=True))
 
+
 class SnapshotPOI(Base):
-    __tablename__ = 'snapshot_poi'
+    __tablename__ = "snapshot_poi"
     id_snapshot = Column(Integer, primary_key=True, autoincrement=True)
     periodo_corte = Column(String(50), nullable=False)
     tipo_reporte = Column(String(100), nullable=False)
-    id_usuario_emisor = Column(UUID(as_uuid=True), ForeignKey('usuario.id_usuario', ondelete='SET NULL'))
+    id_usuario_emisor = Column(UUID(as_uuid=True), ForeignKey("usuario.id_usuario", ondelete="SET NULL"))
     parametros_aplicados = Column(JSON)
     datos_serializados = Column(JSON, nullable=False)
     timestamp_generacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+
 class ConfiguracionGlobal(Base):
-    __tablename__ = 'configuracion_global'
+    __tablename__ = "configuracion_global"
     clave = Column(String(100), primary_key=True)
     valor = Column(JSON, nullable=False)
     descripcion = Column(Text)
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )

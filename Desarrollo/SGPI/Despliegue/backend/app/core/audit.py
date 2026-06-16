@@ -3,6 +3,7 @@ from typing import Optional, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import LogAuditoria
 
+
 async def log_audit_event(
     db: AsyncSession,
     tipo_evento: str,
@@ -13,7 +14,7 @@ async def log_audit_event(
     id_usuario: Optional[str] = None,
     ip_origen: Optional[str] = None,
     resultado: str = "Exito",
-    detalle_error: Optional[str] = None
+    detalle_error: Optional[str] = None,
 ):
     """
     Inserta un registro inmutable en la tabla de auditoría.
@@ -28,7 +29,7 @@ async def log_audit_event(
         id_usuario=uuid.UUID(id_usuario) if isinstance(id_usuario, str) else id_usuario,
         ip_origen=ip_origen,
         resultado=resultado,
-        detalle_error=detalle_error
+        detalle_error=detalle_error,
     )
     db.add(log_entry)
     await db.commit()

@@ -15,6 +15,7 @@ class DateTimeEncoder(json.JSONEncoder):
     """
     Custom JSON encoder that serializes datetime and date objects to ISO 8601 strings.
     """
+
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
@@ -54,19 +55,19 @@ def normalize_query(query: str) -> str:
     """
     if not query:
         return ""
-    
+
     # Trim and lowercase
     q = query.strip().lower()
-    
+
     # Remove accents using NFD normalization
     normalized_chars = []
-    for c in unicodedata.normalize('NFD', q):
+    for c in unicodedata.normalize("NFD", q):
         # Keep non-spacing marks out of the string to strip accents
-        if unicodedata.category(c) != 'Mn':
+        if unicodedata.category(c) != "Mn":
             normalized_chars.append(c)
-            
+
     q = "".join(normalized_chars)
-    
+
     # Condense spaces
     q = " ".join(q.split())
     return q

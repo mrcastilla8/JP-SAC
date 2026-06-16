@@ -1,7 +1,8 @@
-from rapidfuzz import fuzz, process
+from rapidfuzz import fuzz
 import unidecode
 import re
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, Dict
+
 
 class NameNormalizer:
     def __init__(self, umbral_confianza: float = 85.0):
@@ -16,9 +17,9 @@ class NameNormalizer:
         # Lowercase
         cleaned = cleaned.lower()
         # Remove non-alphanumeric chars (keep spaces)
-        cleaned = re.sub(r'[^a-z0-9\s]', ' ', cleaned)
+        cleaned = re.sub(r"[^a-z0-9\s]", " ", cleaned)
         # Remove extra spaces
-        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned
 
     def calculate_similarity(self, name1: str, name2: str) -> float:
@@ -37,21 +38,22 @@ class NameNormalizer:
         """
         if not candidate_names or not target_name:
             return None
-        
+
         target_cleaned = self._clean_text(target_name)
-        
+
         best_id = None
         best_score = 0.0
-        
+
         for cand_id, cand_name in candidate_names.items():
             cand_cleaned = self._clean_text(cand_name)
             score = fuzz.token_set_ratio(target_cleaned, cand_cleaned)
             if score > best_score:
                 best_score = score
                 best_id = cand_id
-                
+
         if best_score >= self.umbral_confianza:
             return (best_id, best_score)
         return None
+
 
 normalizer = NameNormalizer()
