@@ -197,7 +197,7 @@ export default function PublicacionesTesisPage() {
     }
   }, []);
 
-  useEffect(() => { cargar(DEFAULT_FILTROS); }, []);
+  useEffect(() => { cargar(DEFAULT_FILTROS); }, [cargar]);
 
   // ── Aplicar filtros ────────────────────────────────────────────────────────
   const handleFiltrar = () => {

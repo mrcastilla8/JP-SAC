@@ -113,8 +113,7 @@ function isValidFile(file: File): { valid: boolean; error?: string } {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ImportacionDeDatosPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { user }  = useMockAuth();
+  useMockAuth();
   const router    = useRouter();
 
   const [isDragging,     setIsDragging]     = useState(false);

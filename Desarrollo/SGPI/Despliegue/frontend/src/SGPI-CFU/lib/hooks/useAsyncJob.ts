@@ -105,14 +105,6 @@ export function useAsyncJob(statusFetcher: StatusFetcher) {
   // Ref para saber si el componente sigue montado
   const isMountedRef    = useRef(true);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      stopPolling();
-    };
-  }, []);
-
   // ──────────────────────────────────────────────────────────────────────────
   // Control del polling
   // ──────────────────────────────────────────────────────────────────────────
@@ -124,6 +116,14 @@ export function useAsyncJob(statusFetcher: StatusFetcher) {
       pollingRef.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   /**
    * Inicia el polling del status del job.
@@ -206,7 +206,7 @@ export function useAsyncJob(statusFetcher: StatusFetcher) {
         }));
       }
     }, POLLING_INTERVAL_MS);
-  }, [statusFetcher, stopPolling]);
+  }, [statusFetcher]);
 
   // ──────────────────────────────────────────────────────────────────────────
   // Iniciar job
