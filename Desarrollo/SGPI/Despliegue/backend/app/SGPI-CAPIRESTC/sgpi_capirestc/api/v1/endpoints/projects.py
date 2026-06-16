@@ -358,8 +358,9 @@ async def update_proyecto(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    fields = list(obj_in.model_dump(exclude_unset=True).keys())
     logger.info(
-        f"[SGPI-CFPI] Updating project: codigo={codigo!r}, fields={list(obj_in.model_dump(exclude_unset=True).keys())}, user={current_user.get('sub')!r}"
+        f"[SGPI-CFPI] Updating project: codigo={codigo!r}, fields={fields}, user={current_user.get('sub')!r}"
     )
     p = await proyecto.get_by_codigo(db, codigo=codigo)
     if not p:

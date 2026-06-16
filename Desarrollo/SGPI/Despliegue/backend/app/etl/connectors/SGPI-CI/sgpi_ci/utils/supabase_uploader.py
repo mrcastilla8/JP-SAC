@@ -26,7 +26,10 @@ class SupabaseUploader:
         """Obtiene el catálogo de grupos de investigación para Fuzzy Matching de FKs."""
         settings.validate()
         headers = {"apikey": settings.SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"}
-        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/grupo_investigacion?select=id_grupo,nombre_grupo,siglas,codigo_grupo"
+        url = (
+            f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/"
+            "grupo_investigacion?select=id_grupo,nombre_grupo,siglas,codigo_grupo"
+        )
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
@@ -39,7 +42,12 @@ class SupabaseUploader:
         """Obtiene todos los investigadores registrados para mapeo local y evitar consultas redundantes."""
         settings.validate()
         headers = {"apikey": settings.SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"}
-        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/investigador?select=dni,nombres,apellidos,institucion_principal,codigo_renacyt,orcid,categoria_renacyt,estado_renacyt,url_cti_vitae,investigador_sm,is_external"
+        fields = (
+            "dni,nombres,apellidos,institucion_principal,codigo_renacyt,orcid,"
+            "categoria_renacyt,estado_renacyt,url_cti_vitae,investigador_sm,"
+            "is_external"
+        )
+        url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/investigador?select={fields}"
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
@@ -74,7 +82,7 @@ class SupabaseUploader:
 
         totals: Dict[str, int] = {"procesados": 0, "fallidos": 0}
 
-        chunks = [records[i : i + chunk_size] for i in range(0, len(records), chunk_size)]
+        chunks = [records[i:i + chunk_size] for i in range(0, len(records), chunk_size)]
         total_chunks = len(chunks)
 
         headers = {
@@ -111,7 +119,8 @@ class SupabaseUploader:
                     f"[EX4] Error en chunk {idx}/{total_chunks} de la carga a Supabase.\n"
                     f"Los {committed} chunk(s) anteriores ya fueron commiteados y NO se revierten.\n"
                     f"Ejecuta '--preview' para diagnosticar el archivo antes de reintentar.\n"
-                    f"Detalle técnico: {e}\nResponse: {getattr(e.response, 'text', '') if hasattr(e, 'response') else ''}"
+                    f"Detalle técnico: {e}\nResponse: "
+                    f"{getattr(e.response, 'text', '') if hasattr(e, 'response') else ''}"
                 ) from e
 
         return totals

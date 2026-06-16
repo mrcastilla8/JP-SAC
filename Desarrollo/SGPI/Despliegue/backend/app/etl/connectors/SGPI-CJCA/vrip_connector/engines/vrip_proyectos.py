@@ -132,7 +132,8 @@ class VripProyectosExtractor(BaseExtractor):
                 tables = content_soup.find_all("table")
                 if tables:
                     print(
-                        f"[Proyectos VRIP] Se encontró una tabla en el post {post_id}. Extrayendo proyectos estructurados..."
+                        f"[Proyectos VRIP] Se encontró una tabla en el post {post_id}. "
+                        "Extrayendo proyectos estructurados..."
                     )
                     for table in tables:
                         rows = table.find_all("tr")

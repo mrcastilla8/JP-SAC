@@ -195,7 +195,10 @@ class EtlProcessor:
                                 "nivel": cached_item.get("categoria_renacyt", "No Clasificado"),
                                 "condicion": cached_item.get("estado_renacyt"),
                                 "cti_vitae": cached_item.get("url_cti_vitae"),
-                                "nombre_completo": f"{cached_item.get('apellidos', '')}, {cached_item.get('nombres', '')}",
+                                "nombre_completo": (
+                                    f"{cached_item.get('apellidos', '')}, "
+                                    f"{cached_item.get('nombres', '')}"
+                                ),
                             }
                 except Exception as cache_err:
                     logger.warning(f"Error al leer caché de Redis en ETL: {cache_err}")
@@ -279,7 +282,10 @@ class EtlProcessor:
                         mapped_item = {
                             "dni": dni_val,
                             "nombres": str(match.get("nombres", "")).title(),
-                            "apellidos": f"{match.get('apellido_paterno', '')} {match.get('apellido_materno', '')}".strip().title(),
+                            "apellidos": (
+                                f"{match.get('apellido_paterno', '')} {match.get('apellido_materno', '')}"
+                                .strip().title()
+                            ),
                             "codigo_interno_vrip": None,
                             "condicion_laboral": None,
                             "departamento_academico": "Externo (RENACYT)",
@@ -331,7 +337,10 @@ class EtlProcessor:
                         inv = InvestigadorModel(
                             dni=dni,
                             nombres=str(match.get("nombres", "")).title(),
-                            apellidos=f"{match.get('apellido_paterno', '')} {match.get('apellido_materno', '')}".title(),
+                            apellidos=(
+                                f"{match.get('apellido_paterno', '')} {match.get('apellido_materno', '')}"
+                                .title()
+                            ),
                             institucion_principal=str(match.get("institucion_laboral_principal", "")),
                             codigo_renacyt=str(match.get("codigo_registro", "")),
                             orcid=str(match.get("orcid", "")),

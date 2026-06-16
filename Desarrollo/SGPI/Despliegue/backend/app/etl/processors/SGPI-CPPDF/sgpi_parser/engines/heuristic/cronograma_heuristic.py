@@ -96,7 +96,8 @@ class HeuristicCronogramaParser(BaseParser):
             if best_line_idx + 1 < len(text_lines):
                 next_line = text_lines[best_line_idx + 1]
                 next_lower = next_line.lower()
-                # If next line is not an activity, not a bullet, and looks like a continuation (e.g. uppercase or contains years or parentheses)
+                # If next line is not an activity, not a bullet, and looks like a
+                # continuation (e.g. uppercase or contains years or parentheses)
                 if (
                     len(next_line) > 5
                     and not any(next_line.strip().startswith(bullet) for bullet in ["", "\uf076", "•", "*", "-", "·"])
@@ -184,7 +185,7 @@ class HeuristicCronogramaParser(BaseParser):
                             col_fecha = remaining_indices[-1]
 
                     # 2.3 Procesar las filas de datos desde la cabecera
-                    for row in table[header_row_idx + 1 :]:
+                    for row in table[header_row_idx + 1:]:
                         if not row:
                             continue
 

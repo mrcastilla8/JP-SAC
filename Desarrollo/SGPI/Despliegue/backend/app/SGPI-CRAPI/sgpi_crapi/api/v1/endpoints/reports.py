@@ -80,7 +80,9 @@ async def list_snapshots(
 
 
 @router.get("/snapshot/{id_snapshot}", response_model=SnapshotPOIResponse)
-async def get_snapshot_detail(id_snapshot: int, db: AsyncSession = Depends(get_db)):
+async def get_snapshot_detail(
+    id_snapshot: int, db: AsyncSession = Depends(get_db), current_user: dict = Depends(require_staff)
+):
     """
     Obtiene el detalle completo de un Snapshot incluyendo el payload serializado.
     """

@@ -13,7 +13,10 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="SGPI - API de Semaforización de Alertas VRIP",
-    description="Microservicio orquestador para la captura, sincronización y auditoría del ciclo de vida de convocatorias del VRIP.",
+    description=(
+        "Microservicio orquestador para la captura, sincronización y auditoría "
+        "del ciclo de vida de convocatorias del VRIP."
+    ),
     version="1.0.0",
 )
 

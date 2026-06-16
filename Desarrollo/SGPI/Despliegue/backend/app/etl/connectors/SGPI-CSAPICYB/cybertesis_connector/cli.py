@@ -133,7 +133,8 @@ def search(
                 print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
             else:
                 print(
-                    f"\n{Fore.YELLOW}[Info]{Style.RESET_ALL} No se encontraron tesis registradas en el repositorio para: '{query}'"
+                    f"\n{Fore.YELLOW}[Info]{Style.RESET_ALL} "
+                    f"No se encontraron tesis registradas en el repositorio para: '{query}'"
                 )
 
         # 3. Exportación
@@ -148,7 +149,8 @@ def search(
                 if format_type.lower() == "excel":
                     if not quiet:
                         print(
-                            f"\n{Fore.BLUE}[Exportador]{Style.RESET_ALL} Generando libro de Excel Premium en: {out_path}..."
+                            f"\n{Fore.BLUE}[Exportador]{Style.RESET_ALL} "
+                            f"Generando libro de Excel Premium en: {out_path}..."
                         )
                     from cybertesis_connector.utils.excel_generator import export_to_excel
 

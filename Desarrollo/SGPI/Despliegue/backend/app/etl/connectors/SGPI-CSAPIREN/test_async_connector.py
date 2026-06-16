@@ -33,7 +33,8 @@ async def test_async_queries():
         print("Primeros registros:")
         for r in res_name.get("data", [])[:2]:
             print(
-                f" - {r.get('nombres')} {r.get('apellido_paterno')} {r.get('apellido_materno')} (DNI: {r.get('numero_documento')})"
+                f" - {r.get('nombres')} {r.get('apellido_paterno')} "
+                f"{r.get('apellido_materno')} (DNI: {r.get('numero_documento')})"
             )
     except Exception as e:
         print(f"Error en búsqueda por nombre: {e}")
@@ -45,7 +46,8 @@ async def test_async_queries():
         print(f"Total encontrados: {res_full.get('total', 0)}")
         for r in res_full.get("data", []):
             print(
-                f" - {r.get('nombres')} {r.get('apellido_paterno')} {r.get('apellido_materno')} ({r.get('institucion_laboral_principal')})"
+                f" - {r.get('nombres')} {r.get('apellido_paterno')} "
+                f"{r.get('apellido_materno')} ({r.get('institucion_laboral_principal')})"
             )
     except Exception as e:
         print(f"Error en búsqueda por nombre completo: {e}")

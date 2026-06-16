@@ -50,7 +50,7 @@ class ReconciliationRulesEngine:
             else:
                 if fuente == "RAIS" and current.get(field):
                     pass  # RAIS nunca pisa datos que ya existen (Regla de oro simplificada)
-                elif not current.get(field) or self._is_manual_override(current, field) == True:
+                elif not current.get(field) or self._is_manual_override(current, field):
                     merged[field] = value
 
         return merged, requires_quarantine, reason

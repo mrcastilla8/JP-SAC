@@ -4,9 +4,16 @@ from typing import List
 
 from app.db.session import get_db
 from sgpi_capirestc.crud.crud_convocatoria import convocatoria
-from sgpi_capirestc.schemas.domain_schemas import ConvocatoriaCreate, ConvocatoriaUpdate, ConvocatoriaResponse
+from sgpi_capirestc.schemas.domain_schemas import (
+    ConvocatoriaCreate,
+    ConvocatoriaUpdate,
+    ConvocatoriaResponse,
+    EvidenciaDifusionCreate,
+    EvidenciaDifusionResponse,
+)
 from app.core.security import get_current_user
 from app.core.audit import log_audit_event
+from app.models.domain import EvidenciaDifusion
 
 router = APIRouter()
 
@@ -70,10 +77,6 @@ async def update_convocatoria(
         id_usuario=current_user.get("sub"),
     )
     return updated_c
-
-
-from app.models.domain import EvidenciaDifusion
-from sgpi_capirestc.schemas.domain_schemas import EvidenciaDifusionCreate, EvidenciaDifusionResponse
 
 
 @router.post("/{id_convocatoria}/evidence", response_model=EvidenciaDifusionResponse)

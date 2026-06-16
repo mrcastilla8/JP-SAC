@@ -49,7 +49,10 @@ def scrape(
         "all",
         "--source",
         "-s",
-        help="Fuente a consultar: 'vrip' (convocatorias), 'cybertesis' (tesis), 'rais' (proyectos/resoluciones), o 'all'",
+        help=(
+            "Fuente a consultar: 'vrip' (convocatorias), 'cybertesis' (tesis), "
+            "'rais' (proyectos/resoluciones), o 'all'"
+        ),
     ),
     query: Optional[str] = typer.Option(
         None, "--query", "-q", help="Término o palabra clave de búsqueda principal global"
@@ -127,7 +130,10 @@ def scrape(
     sort_by: str = typer.Option(
         "date",
         "--sort-by",
-        help="Campo de ordenamiento: 'date' (fecha), 'budget' (presupuesto), 'title' (título), 'year' (año) o 'code' (código)",
+        help=(
+            "Campo de ordenamiento: 'date' (fecha), 'budget' (presupuesto), "
+            "'title' (título), 'year' (año) o 'code' (código)"
+        ),
     ),
     order: str = typer.Option(
         "desc", "--order", help="Dirección del ordenamiento: 'asc' (ascendente) o 'desc' (descendente)"
@@ -396,12 +402,18 @@ def scrape(
 
             # Free text query match (Global check)
             if query:
-                combined_fields = f"{item.titulo} {item.responsable} {item.codigo_proyecto or ''} {item.numero_resolucion or ''} {' '.join(item.coinvestigadores)}"
+                combined_fields = (
+                    f"{item.titulo} {item.responsable} {item.codigo_proyecto or ''} "
+                    f"{item.numero_resolucion or ''} {' '.join(item.coinvestigadores)}"
+                )
                 if not match_text(combined_fields, query, case_sensitive, regex):
                     continue
 
             if exclude_query:
-                combined_fields = f"{item.titulo} {item.responsable} {item.codigo_proyecto or ''} {item.numero_resolucion or ''} {' '.join(item.coinvestigadores)}"
+                combined_fields = (
+                    f"{item.titulo} {item.responsable} {item.codigo_proyecto or ''} "
+                    f"{item.numero_resolucion or ''} {' '.join(item.coinvestigadores)}"
+                )
                 if match_text(combined_fields, exclude_query, case_sensitive, regex):
                     continue
 
@@ -548,7 +560,10 @@ def scrape(
                                 item.entidad_promotora[:35],
                                 item.fecha_publicacion or "-",
                                 item.plazo_cierre_original,
-                                f"{Fore.GREEN if (item.dias_restantes or 0) > 7 else Fore.RED}{item.dias_restantes if item.dias_restantes is not None else '-'}",
+                                (
+                                    f"{Fore.GREEN if (item.dias_restantes or 0) > 7 else Fore.RED}"
+                                    f"{item.dias_restantes if item.dias_restantes is not None else '-'}"
+                                ),
                             ]
                             for item in filtered_convocatorias
                         ]

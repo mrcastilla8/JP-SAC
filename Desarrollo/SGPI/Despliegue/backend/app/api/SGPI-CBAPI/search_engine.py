@@ -125,7 +125,8 @@ class SearchEngine:
                 if req.source and src not in req.source:
                     continue
 
-                # Check years (Investigadores don't have explicit years, but we can match created_at year if filter is set)
+                # Check years (Investigadores don't have explicit years,
+                # but we can match created_at year if filter is set)
                 inv_year = inv.created_at.year if inv.created_at else None
                 if req.anio_inicio and (not inv_year or inv_year < req.anio_inicio):
                     continue
@@ -274,9 +275,11 @@ class SearchEngine:
                 )
             )
 
-            # Publicacion does not have status, so skip status check or filter out if status is strictly set to something inapplicable
+            # Publicacion does not have status, so skip status check
+            # or filter out if status is strictly set to something inapplicable
             if req.status and "Activo" not in req.status:
-                # If they explicitly filtered status and 'Activo' is not in it, we skip publications or return them depending on logic.
+                # If they explicitly filtered status and 'Activo' is not in it,
+                # we skip publications or return them depending on logic.
                 # Usually publications are always active.
                 pass
 

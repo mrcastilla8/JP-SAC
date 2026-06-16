@@ -183,7 +183,10 @@ def _export_to_excel(model: BaseModel, path: str, quiet: bool):
             row_idx += 1
 
     elif tipo == "resolucion_rectoral":
-        title_text = f"INTEGRANTES Y PROYECTOS APROBADOS POR {model.metadata.numero_resolucion} ({model.metadata.anio_academico})"
+        title_text = (
+            f"INTEGRANTES Y PROYECTOS APROBADOS POR {model.metadata.numero_resolucion} "
+            f"({model.metadata.anio_academico})"
+        )
         headers = [
             "Código Proyecto",
             "Título del Proyecto",
