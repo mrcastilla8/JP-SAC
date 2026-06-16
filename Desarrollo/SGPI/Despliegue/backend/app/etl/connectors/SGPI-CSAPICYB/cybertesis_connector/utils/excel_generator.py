@@ -53,8 +53,14 @@ def export_to_excel(results: QueryResultsModel, output_path: str) -> str:
     ws.row_dimensions[1].height = 30
 
     ws.merge_cells("A2:H2")
+    created_date = (
+        ws.parent.properties.created.strftime('%d/%m/%Y')
+        if ws.parent.properties.created else 'Hoy'
+    )
     ws["A2"] = (
-        f"Búsqueda realizada: '{results.query}' | Tesis recuperadas: {len(results.resultados)} | Fecha: {ws.parent.properties.created.strftime('%d/%m/%Y') if ws.parent.properties.created else 'Hoy'}"
+        f"Búsqueda realizada: '{results.query}' | "
+        f"Tesis recuperadas: {len(results.resultados)} | "
+        f"Fecha: {created_date}"
     )
     ws["A2"].font = subtitle_font
     ws["A2"].alignment = left_align

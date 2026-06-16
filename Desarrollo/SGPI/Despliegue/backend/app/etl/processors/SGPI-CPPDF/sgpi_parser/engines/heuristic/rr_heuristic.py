@@ -55,7 +55,8 @@ class HeuristicRRParser(BaseParser):
         facultad_detectada = None
         area_detectada = None
 
-        # Escanear las primeras páginas para metadatos rectorales (únicamente páginas 0 y 1 para evitar fechas de reportes)
+        # Escanear las primeras páginas para metadatos rectorales
+        # (únicamente páginas 0 y 1 para evitar fechas de reportes)
         for p_idx in range(min(2, len(doc))):
             page = doc[p_idx]
             if is_page_scanned(page):
@@ -69,7 +70,8 @@ class HeuristicRRParser(BaseParser):
             # Buscar número de resolución rectoral
             # Buscar todos en la primera página para tomar el último (que es el real, no los históricos citados antes)
             rr_matches = re.findall(
-                r"\b(?:R\.?R\.?|RESOLUCIÓN RECTORAL)\b\s*(?:N°|N.º)?\s*(\d{5,6}[_-](?:R[_-])?\d{2,4}[_-]?R?(?:/UNMSM)?)",
+                r"\b(?:R\.?R\.?|RESOLUCIÓN RECTORAL)\b\s*(?:N°|N.º)?\s*"
+                r"(\d{5,6}[_-](?:R[_-])?\d{2,4}[_-]?R?(?:/UNMSM)?)",
                 text,
                 re.IGNORECASE,
             )
@@ -145,7 +147,6 @@ class HeuristicRRParser(BaseParser):
         project_code_regex = r"\b([A-Z]\d{7,8}[A-Z]?)\b"
 
         current_project: Optional[Dict[str, Any]] = None
-        title_ended = False
         current_role: Optional[str] = None
         last_added_member: Optional[Dict[str, Any]] = None
 
@@ -277,7 +278,8 @@ class HeuristicRRParser(BaseParser):
                                 if budget is not None:
                                     break
 
-                    # Encontrar todas las líneas en la misma página que pertenecen al bloque del título (rango de Y +/- 10)
+                    # Encontrar todas las líneas en la misma página que pertenecen
+                    # al bloque del título (rango de Y +/- 10)
                     title_lines = []
                     for other_line in lines:
                         other_y = other_line["y"]

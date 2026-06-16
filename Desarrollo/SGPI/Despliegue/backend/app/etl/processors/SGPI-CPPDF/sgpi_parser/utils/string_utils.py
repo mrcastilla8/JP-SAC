@@ -197,7 +197,8 @@ def _parse_spanish_date_range_raw(text: str, default_year: Optional[int] = None)
         y1 = years_in_text[0] if len(years_in_text) >= 2 else y_val
         y2 = years_in_text[-1] if len(years_in_text) >= 1 else y_val
 
-        # Si se cruza el año pero solo se detectó un año al final, y1 podría ser y2 - 1 si mes1 es posterior a mes2 (ej: diciembre al enero de 2026)
+        # Si se cruza el año pero solo se detectó un año al final,
+        # y1 podría ser y2 - 1 si mes1 es posterior a mes2 (ej: diciembre al enero de 2026)
         if len(years_in_text) == 1 and MESES.get(mes1_str, 0) > MESES.get(mes2_str, 0):
             y1 = y2 - 1
 

@@ -58,7 +58,8 @@ class VripConvocatoriasExtractor(BaseExtractor):
 
         if not response:
             print(
-                f"{Fore.RED}[Convocatorias VRIP] Error: No se pudo cargar ninguna página de convocatorias.{Style.RESET_ALL}"
+                f"{Fore.RED}[Convocatorias VRIP] Error: "
+                f"No se pudo cargar ninguna página de convocatorias.{Style.RESET_ALL}"
             )
             return []
 
@@ -71,7 +72,8 @@ class VripConvocatoriasExtractor(BaseExtractor):
         elementor_containers = soup.select(".e-con-inner, .elementor-element.e-con")
         if elementor_containers:
             print(
-                f"[Convocatorias VRIP] Se detectó diseño de Elementor Grid. {len(elementor_containers)} contenedores encontrados."
+                f"[Convocatorias VRIP] Se detectó diseño de Elementor Grid. "
+                f"{len(elementor_containers)} contenedores encontrados."
             )
             for c in elementor_containers:
                 title_elem = c.find(["h1", "h2", "h3", "h4", "p"])
@@ -188,7 +190,8 @@ class VripConvocatoriasExtractor(BaseExtractor):
                                         break
                             except Exception as e:
                                 print(
-                                    f"{Fore.YELLOW}[Convocatorias VRIP] Error procesando PDF Elementor con SGPI-CPPDF: {e}{Style.RESET_ALL}"
+                                    f"{Fore.YELLOW}[Convocatorias VRIP] Error "
+                                    f"procesando PDF Elementor con SGPI-CPPDF: {e}{Style.RESET_ALL}"
                                 )
                             finally:
                                 if os.path.exists(tmp_pdf_path):
@@ -312,7 +315,8 @@ class VripConvocatoriasExtractor(BaseExtractor):
                                             break
                                 except Exception as e:
                                     print(
-                                        f"{Fore.YELLOW}[Convocatorias VRIP] Error procesando PDF Clásico con SGPI-CPPDF: {e}{Style.RESET_ALL}"
+                                        f"{Fore.YELLOW}[Convocatorias VRIP] Error "
+                                        f"procesando PDF Clásico con SGPI-CPPDF: {e}{Style.RESET_ALL}"
                                     )
                                 finally:
                                     if os.path.exists(tmp_pdf_path):

@@ -35,7 +35,8 @@ class ResilientHTTPClient:
                 # Print debug information unless quiet mode is active
                 # We will check an environment variable or class attribute if we want to silence it
                 print(
-                    f"{Fore.CYAN}[HTTP GET]{Style.RESET_ALL} Conectando a {url} (Intento {attempt}/{self.max_retries})..."
+                    f"{Fore.CYAN}[HTTP GET]{Style.RESET_ALL} "
+                    f"Conectando a {url} (Intento {attempt}/{self.max_retries})..."
                 )
                 response = requests.get(url, headers=headers, params=params, timeout=self.timeout)
 
@@ -64,7 +65,8 @@ class ResilientHTTPClient:
                 time.sleep(sleep_time)
 
         print(
-            f"{Fore.RED}[Error]{Style.RESET_ALL} No se pudo establecer conexión con {url} después de {self.max_retries} intentos."
+            f"{Fore.RED}[Error]{Style.RESET_ALL} "
+            f"No se pudo establecer conexión con {url} después de {self.max_retries} intentos."
         )
         return None
 
