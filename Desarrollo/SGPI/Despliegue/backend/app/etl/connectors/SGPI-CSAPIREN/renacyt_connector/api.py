@@ -40,7 +40,10 @@ class RenacytConnector:
     ]
 
     DEFAULT_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
@@ -173,7 +176,10 @@ class RenacytConnector:
         reglamentos = [21, 22, 23, 24, 25, 26, 27]
 
         async def fetch_reglamento(reg):
-            endpoint = f"actoRegistral/obtenerActosRegistralesActivos/reglamento/{reg}/pagina/{page}/numeroRegistros/{page_size}"
+            endpoint = (
+                f"actoRegistral/obtenerActosRegistralesActivos/reglamento/{reg}/"
+                f"pagina/{page}/numeroRegistros/{page_size}"
+            )
             async with self.semaphore:
                 try:
                     res = await self._request(endpoint, method="POST", payload=criteria)

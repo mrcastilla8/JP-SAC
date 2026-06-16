@@ -43,7 +43,10 @@ class HeuristicResultadosParser(BaseParser):
                 # Limpiar prefijos comunes para obtener el nombre del programa
                 clean_line = clean_text(line)
                 clean_line = re.sub(
-                    r"^(?:resultados\s+del\s+concurso\s+del\s+|resultados\s+del\s+concurso\s+de\s+|resultados\s+del\s+)",
+                    (
+                        r"^(?:resultados\s+del\s+concurso\s+del\s+|"
+                        r"resultados\s+del\s+concurso\s+de\s+|resultados\s+del\s+)"
+                    ),
                     "",
                     clean_line,
                     flags=re.IGNORECASE,

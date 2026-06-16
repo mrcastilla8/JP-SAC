@@ -114,7 +114,8 @@ def validate(
 
     if not settings.GEMINI_API_KEY:
         typer.echo(
-            "Error: Se requiere configurar GEMINI_API_KEY en el entorno o en un archivo .env para este comando de desarrollo.",
+            "Error: Se requiere configurar GEMINI_API_KEY en el entorno "
+            "o en un archivo .env para este comando de desarrollo.",
             err=True,
         )
         sys.exit(1)

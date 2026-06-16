@@ -211,7 +211,7 @@ class GIDocentesParser:
             docente_limpio = clean_prefix_and_title(pd.Series([docente_raw])).iloc[0]
 
             lineas = str(row.get("Líneas de Investigación", "")).split(",")
-            lineas = [l.strip() for l in lineas if l.strip()]
+            lineas = [linea.strip() for linea in lineas if linea.strip()]
 
             miembros_grupo.append(
                 {

@@ -67,7 +67,8 @@ async def _get_investigadores_base(db: AsyncSession, params: ReportParams):
 async def _calculate_workloads_batch(db: AsyncSession, params: ReportParams, investigadores: list):
     """
     Realiza el cálculo de carga en batch para evitar N+1 queries.
-    Retorna un diccionario: { dni: { 'proyectos': [...], 'tesis': [...], 'horas_p': X, 'horas_t': Y, 'total': Z, 'excede': B } }
+    Retorna un diccionario:
+    { dni: { 'proyectos': [...], 'tesis': [...], 'horas_p': X, 'horas_t': Y, 'total': Z, 'excede': B } }
     """
     dnis = [inv.dni for inv in investigadores]
     workloads = {

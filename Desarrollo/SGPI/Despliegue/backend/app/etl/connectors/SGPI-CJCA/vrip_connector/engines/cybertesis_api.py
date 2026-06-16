@@ -37,7 +37,8 @@ class CyberthesisExtractor(BaseExtractor):
         response = self.client.get(api_url, params=params, custom_headers=custom_headers)
         if not response or response.status_code != 200:
             print(
-                f"{Fore.RED}[Cybertesis] Error: Fallo en conexión con la API REST (HTTP {response.status_code if response else 'None'}).{Style.RESET_ALL}"
+                f"{Fore.RED}[Cybertesis] Error: Fallo en conexión con la API REST "
+                f"(HTTP {response.status_code if response else 'None'}).{Style.RESET_ALL}"
             )
             return []
 
