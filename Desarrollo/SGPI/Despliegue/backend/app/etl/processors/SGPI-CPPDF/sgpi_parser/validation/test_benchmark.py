@@ -1,3 +1,4 @@
+from typing import Union
 from pydantic import BaseModel
 import typer
 
@@ -14,7 +15,7 @@ def run_accuracy_comparison(pdf_path: str, golden_model: BaseModel):
     """
     # 1. Determinar categoría y ejecutar parser heurístico local correspondiente
     tipo = golden_model.tipo_documento
-    typer.echo("\n[BENCHMARK] Ejecutando motor heurístico local para comparación...")
+    typer.echo(f"\n[BENCHMARK] Ejecutando motor heurístico local para comparación...")
     
     if tipo == "cronograma":
         local_parser = HeuristicCronogramaParser()

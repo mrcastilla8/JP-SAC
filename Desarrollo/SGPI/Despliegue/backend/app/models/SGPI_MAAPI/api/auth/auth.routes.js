@@ -5,11 +5,10 @@
 //   POST /api/auth/login     → Inicio de sesión
 //   GET  /api/auth/me        → Perfil del usuario autenticado
 
-import { Router }      from 'express'
-import { createClient } from '@supabase/supabase-js'
-import { supabase }    from '../../supabase/client.js'
+import { Router } from 'express'
+import { supabase } from '../../supabase/client.js'
 import { supabaseAdmin } from '../../supabase/admin.js'
-import { requireAuth }  from '../middleware/auth.middleware.js'
+import { requireAuth } from '../middleware/auth.middleware.js'
 
 const router = Router()
 
@@ -29,12 +28,10 @@ router.post('/register', async (req, res) => {
     })
   }
 
-  // Política de seguridad: mínimo 8 caracteres y al menos un número
-  const passwordValido = /^(?=.*[0-9]).{8,}$/.test(password)
-  if (!passwordValido) {
+  if (password.length < 6) {
     return res.status(400).json({
       success: false,
-      error: 'La contraseña debe tener al menos 8 caracteres e incluir un número.',
+      error: 'La contraseña debe tener al menos 6 caracteres.',
     })
   }
 
@@ -60,7 +57,7 @@ router.post('/register', async (req, res) => {
       ? 'Registro exitoso. Revisa tu correo electrónico para confirmar tu cuenta.'
       : 'Registro exitoso. Ya puedes iniciar sesión.',
     usuario: {
-      id: data.user?.id,
+      id:    data.user?.id,
       email: data.user?.email,
     },
   })
@@ -92,20 +89,6 @@ router.post('/login', async (req, res) => {
     })
   }
 
-  // Obtener rol_sistema en el mismo login para evitar llamada extra al frontend
-  const { data: perfil } = await supabaseAdmin
-    .from('usuario')
-    .select('rol_sistema, correo_institucional')
-    .eq('id_usuario', data.user.id)
-    .maybeSingle()
-
-  const rolSistema = perfil?.rol_sistema ?? 'Consulta'
-
-  // Sincronizar el rol en app_metadata del JWT para que RLS lo lea sin query a BD
-  await supabaseAdmin.auth.admin.updateUserById(data.user.id, {
-    app_metadata: { rol_sistema: rolSistema },
-  })
-
   return res.status(200).json({
     success: true,
     message: 'Inicio de sesión exitoso.',
@@ -116,10 +99,8 @@ router.post('/login', async (req, res) => {
       token_type:    'Bearer',
     },
     usuario: {
-      id:                   data.user.id,
-      email:                data.user.email,
-      rol_sistema:          rolSistema,
-      correo_institucional: perfil?.correo_institucional ?? null,
+      id:    data.user.id,
+      email: data.user.email,
     },
   })
 })
@@ -134,15 +115,8 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   const { id: userId, email } = req.user
 
-  // Cliente autenticado con el JWT del usuario — respeta RLS sin bypassearla
-  // supabaseAdmin se reserva para operaciones que explícitamente requieren service_role
-  const supabaseUser = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${req.token}` } } }
-  )
-
-  const { data: perfil, error: perfilError } = await supabaseUser
+  // Consulta la tabla pública `usuario`: solo campos propios del usuario operativo
+  const { data: perfil, error: perfilError } = await supabaseAdmin
     .from('usuario')
     .select('id_usuario, correo_institucional, rol_sistema, created_at')
     .eq('id_usuario', userId)

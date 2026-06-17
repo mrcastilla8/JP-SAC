@@ -28,6 +28,3 @@ yarn-error.log*
 # archivos del sistema operativo
 .DS_Store
 Thumbs.db
-
-# caché de TypeScript
-*.tsbuildinfo
