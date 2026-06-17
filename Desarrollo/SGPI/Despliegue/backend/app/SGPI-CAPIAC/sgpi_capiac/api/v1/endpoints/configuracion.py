@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from sgpi_capiac.crud.crud_configuracion import configuracion
 from sgpi_capiac.schemas.capiac_schemas import ConfiguracionGlobalResponse, ConfiguracionGlobalUpdate
+from app.core.security import require_admin
 
 router = APIRouter()
 
@@ -41,8 +42,7 @@ async def update_configuracion(
     config_in: ConfiguracionGlobalUpdate,
     db: AsyncSession = Depends(get_db),
     # Solo el administrador puede modificar la configuración global
-    # TODO: Restaurar cuando se integre autenticación de usuarios
-    # current_user: dict = Depends(require_admin)
+    current_user: dict = Depends(require_admin)
 ) -> Any:
     """
     Actualizar un valor de configuración global (Solo Administradores).

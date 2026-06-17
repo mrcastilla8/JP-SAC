@@ -3,7 +3,7 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SGPI - Sistema de Gestión de Producción Intelectual"
+    PROJECT_NAME: str = "SGPI - Sistema de Gestión de Proyectos de Investigación"
     VERSION: str = "1.0.0"
 
     # Entorno: "development" | "production"
